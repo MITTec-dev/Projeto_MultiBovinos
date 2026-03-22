@@ -5,7 +5,7 @@
 #DEFINE CRLF CHR(13) + CHR(10)
 
 /****************************************************************************************
-    {Protheus.doc} MBClasse
+    {Protheus.doc} MultiBovinos
     @description Classe correspondente as integrações com MULTIBOVINOS, utilizando as APIs 
     disponibilizadas pela empresa.
      - Documentação API: https://docs.timetoknow.apiary.io/#reference/authentication
@@ -13,7 +13,7 @@
     @author    Michihiko Tanimoto
     @since     17/03/2026
 ****************************************************************************************/
-Class MBClasse
+Class MultiBovinos
     Data cURL           As String
     Data cUser          As String
     Data cPassword      As String
@@ -24,7 +24,7 @@ Class MBClasse
     Data cJSonToken     As String
     Data cToken         As String
     Data cError         As String
-    Data cPropriedade   As String       //Codigo da propriedade para consulta de integrações (Ex: Grupo_Empresa_Filial, Cargo, etc)
+    Data cPropri   As String       //Codigo da propriedade para consulta de integrações (Ex: Grupo_Empresa_Filial, Cargo, etc)
     Data cPassCert	    As String
 	Data cCertPath	    As String
 	Data cKeyPath		As String
@@ -49,13 +49,13 @@ Class MBClasse
     Method ClearObj()
     Method GetSSLCache()
     Method Token() 
-    //Method CreateUpdateUser()
-    //Method AssignUserToGroup()
-    //Method RemoveUserfromGroup()
-    //Method DeleteUserByIdentifier()
-    //Method AssignProfileOfUser()
-    //Method RemoveProfileOfUser()
-    //Method UpdateUserStatus()
+    Method SetPropriedade(cPropri)
+    Method AssignUserToGroup()
+    Method RemoveUserfromGroup()
+    Method DeleteUserByIdentifier()
+    Method AssignProfileOfUser()
+    Method RemoveProfileOfUser()
+    Method UpdateUserStatus()
 
 EndClass
 
@@ -63,13 +63,13 @@ EndClass
     {Protheus.doc} New
     @description Metodo construtor da Classe 
 ****************************************************************************************/
-Method New() Class MBClasse
+Method New() Class MultiBovinos
     
     ::cURL          := GetNewPar("MB_XMBURLP","https://www.multbovinos.com/servicos/,https://teste.multbovinos.com/servicos/")
     ::cUser         := GetNewPar("MB_XMBCLIE","integracao.default@multbovinos.com.br")
     ::cPassword     := GetNewPar("MB_XMBPASS","testeintegracao@Mbweb")
-    //::cDirToken     := GetNewPar("BZ_DIRENAB","\MBClasse_token\")
-    //::cFileToken    := GetNewPar("BZ_ARQENAB","MBClasse_token")
+    //::cDirToken     := GetNewPar("BZ_DIRENAB","\MultiBovinos_token\")
+    //::cFileToken    := GetNewPar("BZ_ARQENAB","MultiBovinos_token")
     ::cJSonRet      := ""
     ::cJSon         := ""
     ::cJSonToken    := ""
@@ -101,7 +101,7 @@ Return Nil
     {Protheus.doc} GetSSLCache
     @description Define o uso em memoria da configuração SSL para integrações SIGEP
 ****************************************************************************************/
-Method GetSSLCache() Class MBClasse
+Method GetSSLCache() Class MultiBovinos
 Local _lRet 	:= .F.
 
 //-------------------------------------+
@@ -118,14 +118,14 @@ Return _lRet
     {Protheus.doc} ClearObj
     @description Método limpa objeto
 ********************************************************************************/
-Method ClearObj(_oObj) Class MBClasse
+Method ClearObj(_oObj) Class MultiBovinos
 Return FreeObj(_oObj)
 
 /****************************************************************************************
     {Protheus.doc} Token
-    @description Metodo obtem Token para integraçao MBClasse 
+    @description Metodo obtem Token para integraçao MultiBovinos 
 ****************************************************************************************/
-Method Token() Class MBClasse
+Method Token() Class MultiBovinos
 //Local _cLine    := ""
 Local _lRet     := .T.
 Local _lToken   := .T.
@@ -199,7 +199,7 @@ Return _lRet
     {Protheus.doc} CreateUpdateUser (2.6.2)
     @description Metodo para criar ou atualizar usuarios (funcionario) 
 ****************************************************************************************/
-Method CreateUpdateUser() Class MBClasse 
+Method SetPropriedade(cPropri) Class MultiBovinos 
 Local _lRet     := .T.
 
 ::Token()                           // Retorna token conexão | 
@@ -234,7 +234,7 @@ Return _lRet
     {Protheus.doc} AssignUserToGroup (2.3.3)
     @description Metodo para associar o usuario de um grupo (Grupo_Empresa_filial) 
 ****************************************************************************************/
-Method AssignUserToGroup() Class MBClasse 
+Method AssignUserToGroup() Class MultiBovinos 
 Local _lRet     := .T.
 
 ::Token()                           // Retorna token conexão | 
@@ -266,7 +266,7 @@ Return _lRet
     {Protheus.doc} RemoveUserfromGroup (2.3.4)
     @description Metodo para remover o usuario de um grupo (Grupo_Empresa_filial) 
 ****************************************************************************************/
-Method RemoveUserfromGroup() Class MBClasse 
+Method RemoveUserfromGroup() Class MultiBovinos 
 Local _lRet     := .T.
 
 ::Token()                           // Retorna token conexão | 
@@ -298,7 +298,7 @@ Return _lRet
     {Protheus.doc} DeleteUserByIdentifier (2.6.10)
     @description Metodo para deletar usuarios pelo ID
 ****************************************************************************************/
-Method DeleteUserByIdentifier() Class MBClasse 
+Method DeleteUserByIdentifier() Class MultiBovinos 
 Local _lRet     := .T.
 
 ::Token()                           // Retorna token conexão | 
@@ -330,7 +330,7 @@ Return _lRet
     {Protheus.doc} AssignProfileOfUser (2.5.4)
     @description Metodo para associar o usuario a um cargo (profile)
 ****************************************************************************************/
-Method AssignProfileOfUser() Class MBClasse 
+Method AssignProfileOfUser() Class MultiBovinos 
 Local _lRet     := .T.
 
 ::Token()                           // Retorna token conexão | 
@@ -362,7 +362,7 @@ Return _lRet
     {Protheus.doc} RemoteProfileOfUser (2.5.5)
     @description Metodo para remover o usuario a um cargo (profile)
 ****************************************************************************************/
-Method RemoveProfileOfUser() Class MBClasse 
+Method RemoveProfileOfUser() Class MultiBovinos 
 Local _lRet     := .T.
 
 ::Token()                           // Retorna token conexão | 
@@ -394,7 +394,7 @@ Return _lRet
     {Protheus.doc} UpdateUserStatus (2.6.9)
     @description Metodo para atualizar o status do funcionario false=desligado
 ****************************************************************************************/
-Method UpdateUserStatus() Class MBClasse 
+Method UpdateUserStatus() Class MultiBovinos 
 Local _lRet     := .T.
 
 ::Token()                           // Retorna token conexão | 
