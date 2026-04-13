@@ -1,0 +1,246 @@
+#INCLUDE "TOTVS.CH"
+#DEFINE CRLF CHR(13) + CHR(10)
+
+/****************************************************************************************
+    {Protheus.doc} MULTIBOVINOS
+    @description Classe correspondente as integrações com o WS SOAP da MULTIBOVINOS
+     - Documentação sobre o serviço de integração em http://www.multibovinos.com.br/servicos-de-integracao/
+     - Documentação sobre o XML de integração em http://www.multibovinos.com.br/servicos-de-integracao/#xml
+    @author    Michihiko Tanimoto
+    @since     30/03/2026
+****************************************************************************************/
+Class MULTIBOVINOS
+    Data cURL           As String
+    Data cUser          As String
+    Data cPassword      As String
+    Data cSoapRet       As String
+    Data cSoap          As String
+    Data cError         As String
+    Data cPropriedade   As String
+    //Data cDataEnv       As String       
+    Data oWsdl          As Object 
+    Data oSoap          As Object
+
+    Method New() Constructor
+    Method ClearObj()
+    Method GetAuthentication()
+    Method SetPropriedade()
+    Method enviarCadastros()
+    Method lerConfirmacao()
+    Method lerResposta()
+    Method lerRetorno()
+    //Method ping()
+
+EndClass
+
+/****************************************************************************************
+    {Protheus.doc} New
+    @description Metodo construtor da Classe MULTIBOVINOS
+****************************************************************************************/
+Method New() Class MULTIBOVINOS
+
+    ::cURL          := GetNewPar("MB_XMBURLP","https://teste.multbovinos.com/servicos/")    //https://www.multbovinos.com/servicos/,
+    ::cUser         := GetNewPar("MB_XMBCLIE","integracao.default@multbovinos.com.br")
+    ::cPassword     := GetNewPar("MB_XMBPASS","testeintegracao@Mbweb")
+    ::cSoapRet      := ""
+    ::cSoap         := ""
+    ::cError        := ""
+    ::oWsdl         := Nil
+    ::oSoap         := Nil
+
+Return Nil 
+
+/*********************************************************************************
+    {Protheus.doc} ClearObj
+    @description Método limpa objeto
+********************************************************************************/
+Method ClearObj(_oObj) Class MULTIBOVINOS
+Return FreeObj(_oObj)
+
+/****************************************************************************************
+    {Protheus.doc} Token
+    @description Metodo obtem Token para integraçao Astrein 
+****************************************************************************************/
+Method GetAuthentication() Class MULTIBOVINOS
+    Local _lRet     := .T.
+
+    ::oWsdl:SetAuthentication(::cUser,::cPassword)  //Defino o usuari e senha para autenticacao HTTP
+    If (::oWsdl:GetAuthentication(::cUser,::cPassword)) //Verfica se autenticacao HTTP está habilitada (.t.)
+        ::oWsdl:AddHttpHeader("Authorization", "Basic " + Encode64(::cUser+":"+::cPassword))    //Incluir no header a autenticacao com token criptografado
+        ::oWsdl:SetValue(0,::cSoap) //Tratativa do retorno das Fazendas, caso haja alguma configuração errada, o retorno será falso e não prosseguirá com o envio dos dados.
+        If ::oWsdl:SendSoapMsg()
+            ::cSoapRet := Alltrim(::oWsdl:GetSoapResponse())
+            dbSelectArea("ZZ1")
+            ZZ1->(dbSetOrder(1))
+            ZZ1->(dbSeek(cEmpAnt+cFilAnt))
+            ::cPropriedade := Alltrim(ZZ1->ZZ1_FAZEND)
+            ::SetPropriedade()
+        Else
+            ::cError := "Erro no SendSoap: "+Alltrim(::oWsdl:cError)
+            _lRet := .F.
+        EndIf         
+    Else
+        ::cError    := "Erro na autenticacao usuario e senha: "+Alltrim(::oWsdl:cError)
+        _lRet       := .F.
+    EndIf
+
+Return _lRet 
+
+/****************************************************************************************
+    {Protheus.doc} enviarCadastros
+    @description Metodo para criar ou atualizar usuarios (funcionario) 
+****************************************************************************************/
+Method SetPropriedade() Class MULTIBOVINOS 
+    Local _lRet     := .T.
+
+    ::oWsdl := TWsdlManager():New()                     //Instancia classe TWsdlManager
+    ::oWsdl:lSSLInsecure := .T.                         //Conexão SSL com o servidor de forma anônima, ou seja, sem verificação de certificados ou chaves.
+//https://teste.multbovinos.com/servicos/usuario/61443/selecione-propriedade/?format=json
+    If ::oWsdl:ParseUrl(::cURL)                         //Interpreta o XML do WSDL
+        If ::oWsdl:SetOperation("selecione-propriedade")        //Seta a operacao
+            ::GetAuthentication()                       //Verifica a autenticação HTTP no WSDL
+            ::oWsdl:AddHttpHeader("Content-Type","usuario/"+::cPropriedade+"/selecione-propriedade/")      //::oWsdl:AddHttpHeader("Content-Type","text/xml;charset=UTF-8")
+            ::oWsdl:SetValue(0,::cSoap)
+            If ::oWsdl:SendSoapMsg()
+                ::cSoapRet := Alltrim(::oWsdl:GetSoapResponse())
+            Else
+                ::cError := "Erro no SendSoap: "+Alltrim(::oWsdl:cError)
+                _lRet := .F.
+            EndIf 
+        Else
+            ::cError := "Erro setar operacao enviarCadastros: "+Alltrim(::oWsdl:cError)
+            _lRet := .F.
+        EndIf
+    Else
+        ::cError := "Erro no Parse URL: "+Alltrim(::oWsdl:cError)
+        _lRet := .F.
+    EndIf
+
+::ClearObj(::oWsdl)             // Limpa Objeto 
+
+Return _lRet 
+
+/****************************************************************************************
+    {Protheus.doc} lerConfirmacao
+    @description Metodo para criar ou atualizar usuarios (funcionario) 
+****************************************************************************************/
+Method lerConfirmacao() Class MULTIBOVINOS 
+    Local _lRet     := .T.
+    Local _cAux     := ""
+
+    ::oWsdl := TWsdlManager():New()                 //Instancia classe TWsdlManager
+    ::oWsdl:lSSLInsecure := .T.                         //Conexão SSL com o servidor de forma anônima, ou seja, sem verificação de certificados ou chaves.
+
+    If ::oWsdl:ParseUrl(::cURL)                     //Interpreta o XML do WSDL
+        If ::oWsdl:SetOperation("lerConfirmacao")      //Seta a operacao
+            ::GetAuthentication()                   //Verifica a autenticação HTTP no WSDL
+            ::oWsdl:AddHttpHeader("Content-Type","text/xml;charset=UTF-8")
+            ::oWsdl:SetValue(0,Alltrim(::cSoap))           // Parametro da data do envio para protesto para consultar o retorno
+            If ::oWsdl:SendSoapMsg()
+                _cAux := Alltrim(::oWsdl:GetParsedResponse())
+                //Retiro algumas coisas no XML Soap senão nao reconhece a estrutura do XML
+                _cAux := StrTran(_cAux,"return:")
+                _cAux := Strtran(_cAux,chr(13),'')
+                _cAux := Strtran(_cAux,chr(10),'')
+                _cAux := Strtran(_cAux,chr(9) ,'')
+                ::cSoapRet := _cAux
+            Else
+                ::cError := "Erro no SendSoap: "+Alltrim(::oWsdl:cError)
+                _lRet := .F.
+            EndIf 
+        Else
+            ::cError := "Erro setar operacao lerConfirmacao: "+Alltrim(::oWsdl:cError)
+            _lRet := .F.
+        EndIf
+    Else
+        ::cError := "Erro no Parse URL: "+Alltrim(::oWsdl:cError)
+        _lRet := .F.
+    EndIf
+
+    ::ClearObj(::oWsdl)             // Limpa Objeto 
+
+Return _lRet 
+
+/****************************************************************************************
+    {Protheus.doc} lerResposta
+    @description Metodo para verificar confirmacao ou critica do arquivo de envio por cada titulo
+    tag <aprovado>1</aprovado> aceito e <aprovado>0</aprovado> rejeitado ver tag <critica>51</critica>
+****************************************************************************************/
+Method lerResposta() Class MULTIBOVINOS 
+    Local _lRet     := .T.
+    Local _cAux     := ""
+
+    ::oWsdl := TWsdlManager():New()                 //Instancia classe TWsdlManager
+    ::oWsdl:lSSLInsecure := .T.                         //Conexão SSL com o servidor de forma anônima, ou seja, sem verificação de certificados ou chaves.
+
+    If ::oWsdl:ParseUrl(::cURL)                     //Interpreta o XML do WSDL
+        If ::oWsdl:SetOperation("lerResposta")      //Seta a operacao
+            ::GetAuthentication()                   //Verifica a autenticação HTTP no WSDL
+            ::oWsdl:AddHttpHeader("Content-Type","text/xml;charset=UTF-8")
+            ::oWsdl:SetValue(0,Alltrim(Substr(::cSoap,1,2)))           //Tipo da Resposta B-Arq de remessa;DP=Arq Desistencia;CP=Arq de Cancelamento;RE=Arq de Repositório de exclusões;C=Arq de Confirmação;R=Arq de Retorno
+            ::oWsdl:SetValue(1,Alltrim(Substr(::cSoap,4,10)))          //Data da Remessa
+            If ::oWsdl:SendSoapMsg()
+                _cAux := Alltrim(::oWsdl:GetParsedResponse())
+                //Retiro algumas coisas no XML Soap senão nao reconhece a estrutura do XML
+                _cAux := StrTran(_cAux,"return:")
+                _cAux := Strtran(_cAux,chr(13),'')
+                _cAux := Strtran(_cAux,chr(10),'')
+                _cAux := Strtran(_cAux,chr(9) ,'')
+                ::cSoapRet := _cAux 
+            Else
+                ::cError := "Erro no SendSoap: "+Alltrim(::oWsdl:cError)
+                _lRet := .F.
+            EndIf 
+        Else
+            ::cError := "Erro setar operacao lerResposta: "+Alltrim(::oWsdl:cError)
+            _lRet := .F.
+        EndIf
+    Else
+        ::cError := "Erro no Parse URL: "+Alltrim(::oWsdl:cError)
+        _lRet := .F.
+    EndIf
+
+    ::ClearObj(::oWsdl)             // Limpa Objeto 
+
+Return _lRet 
+
+/****************************************************************************************
+    {Protheus.doc} lerRetorno
+    @description Metodo para buscar retorno de baixa apos envio para protesto
+****************************************************************************************/
+Method lerRetorno() Class MULTIBOVINOS 
+    Local _lRet     := .T.
+    Local _cAux     := ""
+
+    ::oWsdl := TWsdlManager():New()                 //Instancia classe TWsdlManager
+    ::oWsdl:lSSLInsecure := .T.                         //Conexão SSL com o servidor de forma anônima, ou seja, sem verificação de certificados ou chaves.
+
+    If ::oWsdl:ParseUrl(::cURL)                     //Interpreta o XML do WSDL
+        If ::oWsdl:SetOperation("lerRetorno")      //Seta a operacao
+            ::GetAuthentication()                   //Verifica a autenticação HTTP no WSDL
+            ::oWsdl:AddHttpHeader("Content-Type","text/xml;charset=UTF-8")
+            ::oWsdl:SetValue(0,Alltrim(::cSoap))           // Parametro da data de consulta de retorno
+            If ::oWsdl:SendSoapMsg()
+                _cAux := Alltrim(::oWsdl:GetParsedResponse())
+                //Retiro algumas coisas no XML Soap senão nao reconhece a estrutura do XML
+                _cAux := StrTran(_cAux,"return:")
+                _cAux := Strtran(_cAux,chr(13),'')
+                _cAux := Strtran(_cAux,chr(10),'')
+                _cAux := Strtran(_cAux,chr(9) ,'')
+                ::cSoapRet := _cAux
+            Else
+                ::cError := "Erro no SendSoap: "+Alltrim(::oWsdl:cError)
+                _lRet := .F.
+            EndIf 
+        Else
+            ::cError := "Erro setar operacao lerRetorno: "+Alltrim(::oWsdl:cError)
+            _lRet := .F.
+        EndIf
+    Else
+        ::cError := "Erro no Parse URL: "+Alltrim(::oWsdl:cError)
+        _lRet := .F.
+    EndIf
+
+    ::ClearObj(::oWsdl)             // Limpa Objeto 
+
+Return _lRet 
