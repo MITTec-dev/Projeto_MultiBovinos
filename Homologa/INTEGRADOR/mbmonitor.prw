@@ -148,16 +148,13 @@ Method GrvMonitor() Class mbMonitor
     Local _aArea    := GetArea()
     Local _lRet     := .T.
     Local _lGrava   := .F.
-    //Local _cIDENABLEY  := GetNewPar("BZ_XENABID","0017|0018|0019|0020|0021|0022|0023")
 
-    If ::cStatus=="1"           //Pelo status passado está incluíndo um novo processo de integração Protheus-->Multibovinos
-                                //preciso buscar a proxima sequencia disponivel deste processo+chave
+    If ::cStatus=="1"           //Pelo status passado está incluíndo um novo processo de integração Protheus-->Multibovinos //preciso buscar a proxima sequencia disponivel deste processo+chave
         ::nTpRet    := 1        //Dentro da VALIDZZ0 o valor 1=incrementa novo processo; 2=atualiza e traz o ultimo ja existente e retorna valor de tentativas
         ::ValidZZ0()            //retorna a proxima sequencia deste processo+chave
         _lGrava     := .T.      //Flag indicando novo registro na ZZ0
         ::nTentativa:= 0        //Preciso forcar a quantidade de tentativas pois a validZZ0 retorna a quantidade do ultima sequencia do processo+chave
-    Else                        //Alteracao
-                                //Forca a Atualização do registro ja existente na ZZ0
+    Else                        //Alteracao     //Forca a Atualização do registro ja existente na ZZ0
         ::nTpRet  := 2          //Dentro da VALIDZZ0 o valor 1=incrementa novo processo; 2=atualiza e traz o ultimo ja existente e retorna valor de tentativas
         _lGrava   := .F.        //Flag Indicando autalizaçao de registro na ZZ0
         dbSelectArea("ZZ0")
@@ -181,9 +178,9 @@ Method GrvMonitor() Class mbMonitor
         ZZ0->ZZ0_HRPFIM := ""
         ZZ0->ZZ0_STPROC := ::cStatus
         ZZ0->ZZ0_TENTAT := ::nTentativa
-        ZZ0->ZZ0_QTDREG := ::nQtdReg
-        ZZ0->ZZ0_ERPFUN := ::cFunName
-        ZZ0->ZZ0_FAZEND := ::cFazenda
+        //ZZ0->ZZ0_QTDREG := ::nQtdReg
+        //ZZ0->ZZ0_ERPFUN := ::cFunName
+        //ZZ0->ZZ0_FAZEND := ::cFazenda
         ZZ0->( MsUnLock() )
     Else 
         RecLock("ZZ0",_lGrava)

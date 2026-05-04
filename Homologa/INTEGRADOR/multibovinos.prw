@@ -15,10 +15,9 @@ Class MultiBovinos
     Data cURL           As String
     Data cUser          As String
     Data cPassword      As String
-    //Data cDirToken      As String
-    //Data cFileToken     As String
     Data cJSonRet       As String
-    Data cJSon          As String
+    Data cBody          As String
+    Data cPath          As String
     Data cJSonToken     As String
     Data cToken         As String
     Data cError         As String
@@ -27,6 +26,8 @@ Class MultiBovinos
 	Data cCertPath	    As String
 	Data cKeyPath		As String
 	Data cCACertPath	As String
+    Data cID            As String
+    Data cRet           As String
 
     Data nSSL2		    As Integer
 	Data nSSL3		    As Integer
@@ -40,20 +41,14 @@ Class MultiBovinos
 
     Data oRest          As Object 
     Data oJson          As Object
-    Data oJsonToken     As Object
     Data oJsonRet       As Object
 
     Method New() Constructor
     Method ClearObj()
     Method GetSSLCache()
-    Method Token() 
+    Method Token()
     Method SetPropriedade()
-    Method UnidadesMedidas()
-    Method RemoveUserfromGroup()
-    Method DeleteUserByIdentifier()
-    Method AssignProfileOfUser()
-    Method RemoveProfileOfUser()
-    Method UpdateUserStatus()
+    Method PostCadastros()
 
 EndClass
 
@@ -69,7 +64,8 @@ Method New() Class MultiBovinos
     //::cDirToken     := GetNewPar("BZ_DIRENAB","\MultiBovinos_token\")
     //::cFileToken    := GetNewPar("BZ_ARQENAB","MultiBovinos_token")
     ::cJSonRet      := ""
-    ::cJSon         := ""
+    ::cBody         := ""
+    ::cPath         := ""
     ::cJSonToken    := ""
     ::cToken        := ""
     ::cError        := ""
@@ -77,6 +73,8 @@ Method New() Class MultiBovinos
 	::cCertPath	    := "" 
 	::cKeyPath		:= "" 
 	::cCACertPath	:= ""
+    ::cID           := ""
+    ::cRet          := "" 
 
     ::nSSL2		    := 0
 	::nSSL3		    := 0
@@ -88,7 +86,6 @@ Method New() Class MultiBovinos
     ::aHeadOut      := {}
     ::oRest         := Nil
     ::oJson         := Nil
-    ::oJsonToken    := Nil 
     ::oJsonRet      := Nil 
 
 Return Nil 
@@ -141,10 +138,10 @@ Method Token() Class MultiBovinos
         ::oRest:SetPath("/login-integracao/")                       // Metodo a ser enviado | 
         ::oRest:SetPostParams(::cJSonToken)                         // Parametros de Envio |
         If ::oRest:Post(::aHeadOut)                                 // Utiliza metodo POST |
-            ::cJSonRet	:= RTrim(::oRest:GetResult())               // Desesserializa JSON |
-            ::oJsonRet  := FromJson(::cJSonRet)
-            ::cToken    := "JWT "+Rtrim(::oJsonRet:adata[1][2])     //RTrim(::oJsonRet[#"token"])
-            _lRet       := .T.
+            ::cJSonRet := RTrim(::oRest:GetResult())               // Desesserializa JSON |
+            ::oJsonRet := oJson:FromJson(::cJSonRet)
+            ::cToken   := "JWT "+Rtrim(oJson:GetJsonObject("token"))
+            _lRet      := .T.
         Else
             ::cError    := "Erro ao validar token. Error " + ::oRest:GetLastError()         // Desesserializa JSON |
             _lRet       := .F.
@@ -153,7 +150,6 @@ Method Token() Class MultiBovinos
     
     // Limpa Objeto |
     ::ClearObj(oJson)
-    ::ClearObj(::oJsonToken)
     ::ClearObj(::oJsonRet)
     ::ClearObj(::oRest)
 
@@ -166,7 +162,9 @@ Return _lRet
 Method SetPropriedade() Class MultiBovinos 
     Local _lRet     := .T.
 
-    _lRet := ::Token()                           // Retorna token conexão | 
+    If Empty(::cToken)
+        _lRet := ::Token()                           // Retorna token conexão |
+    EndIf
 
     If _lRet
         // Array contendo parametros de cabeçalho |
@@ -177,12 +175,14 @@ Method SetPropriedade() Class MultiBovinos
     
         ::oRest   := FWRest():New(RTrim(::cURL))        // Instancia classe FwRest |
         ::oRest:nTimeOut := 600                         // TimeOut do processo |
-        ::oRest:SetPath(::cJSon)                        // Metodo a ser enviado | 
+        ::oRest:SetPath(::cBody+::cPath)                        // Metodo a ser enviado | 
         //::oRest:SetPostParams(::cJSon)                // Parametros de Envio |
     
-        If ::oRest:Post(::aHeadOut,::cJSon)              // Utiliza metodo POST |
-            ::cJSonRet	:= RTrim(::oRest:GetResult())   // Desesserializa JSON |
-            _lRet       := .T.
+        If ::oRest:Post(::aHeadOut)     // Utiliza metodo POST |
+            ::cJSonRet := RTrim(::oRest:GetResult())   // Desesserializa JSON |
+            //::oJsonRet := oJson:FromJson(::cJSonRet)
+            //::cID      := Rtrim(oJson:GetJsonObject(::cRet))
+            _lRet      := .T.
         Else
             ::cError    := RTrim(::oRest:GetResult())   //"Erro ao obter integracoes. Error " + ::oRest:GetLastError() // Desesserializa JSON |
             _lRet       := .F.
@@ -194,13 +194,15 @@ Method SetPropriedade() Class MultiBovinos
 Return _lRet 
 
 /****************************************************************************************
-    {Protheus.doc} AssignUserToGroup (2.3.3)
-    @description Metodo para associar o usuario de um grupo (Grupo_Empresa_filial) 
+    {Protheus.doc} PostCadastros
+    @description Metodo para consumir end-poit de cadastros geral
 ****************************************************************************************/
-Method UnidadesMedidas() Class MultiBovinos 
+Method PostCadastros() Class MultiBovinos 
     Local _lRet     := .T.
 
-    ::Token()                           // Retorna token conexão | 
+    If Empty(::cToken)
+        _lRet := ::Token()                           // Retorna token conexão |
+    EndIf
 
     // Array contendo parametros de cabeçalho |
     ::aHeadOut  := {}
@@ -210,12 +212,14 @@ Method UnidadesMedidas() Class MultiBovinos
 
     ::oRest   := FWRest():New(RTrim(::cURL))        // Instancia classe FwRest |
     ::oRest:nTimeOut := 600                         // TimeOut do processo |
-    ::oRest:SetPath("unidadesmedidas/")             // Metodo a ser enviado | 
-    ::oRest:SetPostParams(::cJSon)                  // Parametros de Envio | body da requisição
+    ::oRest:SetPath(::cPath)              // Metodo a ser enviado | 
+    ::oRest:SetPostParams(::cBody)                  // Parametros de Envio | body da requisição
 
     If ::oRest:Post(::aHeadOut)                     // Utiliza metodo POST |
-        ::cJSonRet	:= RTrim(::oRest:GetResult())   // Desesserializa JSON |
-        _lRet       := .T.
+        ::cJSonRet := RTrim(::oRest:GetResult())   // Desesserializa JSON |
+        ::oJsonRet := oJson:FromJson(::cJSonRet)
+        ::cID      := Rtrim(oJson:GetJsonObject(::cRet))   // Recupera o ID do cadastro criado/atualizado para retorno, caso haja necessidade de criar outras integrações relacionadas ao mesmo cadastro, como por exemplo, envio de endereço ou contato relacionado a um cadastro de cliente ou fornecedor.
+        _lRet      := .T.
     Else
         ::cError    := "Erro ao obter integracoes. Error " + ::oRest:GetLastError() // Desesserializa JSON |
         _lRet       := .F.
@@ -225,162 +229,3 @@ Method UnidadesMedidas() Class MultiBovinos
 
 Return _lRet 
 
-/****************************************************************************************
-    {Protheus.doc} RemoveUserfromGroup (2.3.4)
-    @description Metodo para remover o usuario de um grupo (Grupo_Empresa_filial) 
-****************************************************************************************/
-Method RemoveUserfromGroup() Class MultiBovinos 
-Local _lRet     := .T.
-
-::Token()                           // Retorna token conexão | 
-
-// Array contendo parametros de cabeçalho |
-::aHeadOut  := {}
-aAdd(::aHeadOut,"Content-Type: application/json" )
-aAdd(::aHeadOut,"Authorization: Bearer " + ::cToken)
-aAdd(::aHeadOut,'User-Agent: Mozilla/5.0 (compatible; Protheus '+GetBuild()+')')    //Adiciona user agente. Obrigatorio a partir de 01/06/2022. Tanimoto 20220509
-
-::oRest   := FWRest():New(RTrim(::cURL))        // Instancia classe FwRest |
-::oRest:nTimeOut := 600                         // TimeOut do processo |
-::oRest:SetPath("/api/v1/groups" + ::cJSon)         // Metodo a ser enviado | 
-//::oRest:SetPostParams(::cJSon)                  // Parametros de Envio |
-
-If ::oRest:Delete(::aHeadOut)                     // Utiliza metodo POST |
-    ::cJSonRet	:= RTrim(::oRest:GetResult())   // Desesserializa JSON |
-    _lRet       := .T.
-Else
-    ::cError    := "Erro ao obter integracoes. Error " + ::oRest:GetLastError() // Desesserializa JSON |
-    _lRet       := .F.
-EndIf
-
-::ClearObj(::oRest)             // Limpa Objeto |
-
-Return _lRet 
-
-/****************************************************************************************
-    {Protheus.doc} DeleteUserByIdentifier (2.6.10)
-    @description Metodo para deletar usuarios pelo ID
-****************************************************************************************/
-Method DeleteUserByIdentifier() Class MultiBovinos 
-Local _lRet     := .T.
-
-::Token()                           // Retorna token conexão | 
-
-// Array contendo parametros de cabeçalho |
-::aHeadOut  := {}
-aAdd(::aHeadOut,"Content-Type: application/json" )
-aAdd(::aHeadOut,"Authorization: Bearer " + ::cToken)
-aAdd(::aHeadOut,'User-Agent: Mozilla/5.0 (compatible; Protheus '+GetBuild()+')')    //Adiciona user agente. Obrigatorio a partir de 01/06/2022. Tanimoto 20220509
-
-::oRest   := FWRest():New(RTrim(::cURL))        // Instancia classe FwRest |
-::oRest:nTimeOut := 600                         // TimeOut do processo |
-::oRest:SetPath("/api/v2/users" + ::cJSon)         // Metodo a ser enviado | 
-//::oRest:SetPostParams(::cJSon)                  // Parametros de Envio |
-
-If ::oRest:Delete(::aHeadOut)                     // Utiliza metodo POST |
-    ::cJSonRet	:= RTrim(::oRest:GetResult())   // Desesserializa JSON |
-    _lRet       := .T.
-Else
-    ::cError    := "Erro ao obter integracoes. Error " + ::oRest:GetLastError() // Desesserializa JSON |
-    _lRet       := .F.
-EndIf
-
-::ClearObj(::oRest)             // Limpa Objeto |
-
-Return _lRet 
-
-/****************************************************************************************
-    {Protheus.doc} AssignProfileOfUser (2.5.4)
-    @description Metodo para associar o usuario a um cargo (profile)
-****************************************************************************************/
-Method AssignProfileOfUser() Class MultiBovinos 
-Local _lRet     := .T.
-
-::Token()                           // Retorna token conexão | 
-
-// Array contendo parametros de cabeçalho |
-::aHeadOut  := {}
-aAdd(::aHeadOut,"Content-Type: application/json" )
-aAdd(::aHeadOut,"Authorization: Bearer " + ::cToken)
-aAdd(::aHeadOut,'User-Agent: Mozilla/5.0 (compatible; Protheus '+GetBuild()+')')    //Adiciona user agente. Obrigatorio a partir de 01/06/2022. Tanimoto 20220509
-
-::oRest   := FWRest():New(RTrim(::cURL))        // Instancia classe FwRest |
-::oRest:nTimeOut := 600                         // TimeOut do processo |
-::oRest:SetPath("/api/v2/userProfiles" + ::cJSon)         // Metodo a ser enviado | 
-//::oRest:SetPostParams(::cJSon)                  // Parametros de Envio |
-
-If ::oRest:Put(::aHeadOut)                     // Utiliza metodo POST |
-    ::cJSonRet	:= RTrim(::oRest:GetResult())   // Desesserializa JSON |
-    _lRet       := .T.
-Else
-    ::cError    := "Erro ao obter integracoes. Error " + ::oRest:GetLastError() // Desesserializa JSON |
-    _lRet       := .F.
-EndIf
-
-::ClearObj(::oRest)             // Limpa Objeto |
-
-Return _lRet 
-
-/****************************************************************************************
-    {Protheus.doc} RemoteProfileOfUser (2.5.5)
-    @description Metodo para remover o usuario a um cargo (profile)
-****************************************************************************************/
-Method RemoveProfileOfUser() Class MultiBovinos 
-Local _lRet     := .T.
-
-::Token()                           // Retorna token conexão | 
-
-// Array contendo parametros de cabeçalho |
-::aHeadOut  := {}
-aAdd(::aHeadOut,"Content-Type: application/json" )
-aAdd(::aHeadOut,"Authorization: Bearer " + ::cToken)
-aAdd(::aHeadOut,'User-Agent: Mozilla/5.0 (compatible; Protheus '+GetBuild()+')')    //Adiciona user agente. Obrigatorio a partir de 01/06/2022. Tanimoto 20220509
-
-::oRest   := FWRest():New(RTrim(::cURL))        // Instancia classe FwRest |
-::oRest:nTimeOut := 600                         // TimeOut do processo |
-::oRest:SetPath("/api/v2/userProfiles" + ::cJSon)         // Metodo a ser enviado | 
-//::oRest:SetPostParams(::cJSon)                  // Parametros de Envio |
-
-If ::oRest:Delete(::aHeadOut)                     // Utiliza metodo POST |
-    ::cJSonRet	:= RTrim(::oRest:GetResult())   // Desesserializa JSON |
-    _lRet       := .T.
-Else
-    ::cError    := "Erro ao obter integracoes. Error " + ::oRest:GetLastError() // Desesserializa JSON |
-    _lRet       := .F.
-EndIf
-
-::ClearObj(::oRest)             // Limpa Objeto |
-
-Return _lRet 
-
-/****************************************************************************************
-    {Protheus.doc} UpdateUserStatus (2.6.9)
-    @description Metodo para atualizar o status do funcionario false=desligado
-****************************************************************************************/
-Method UpdateUserStatus() Class MultiBovinos 
-Local _lRet     := .T.
-
-::Token()                           // Retorna token conexão | 
-
-// Array contendo parametros de cabeçalho |
-::aHeadOut  := {}
-aAdd(::aHeadOut,"Content-Type: application/json" )
-aAdd(::aHeadOut,"Authorization: Bearer " + ::cToken)
-aAdd(::aHeadOut,'User-Agent: Mozilla/5.0 (compatible; Protheus '+GetBuild()+')')    //Adiciona user agente. Obrigatorio a partir de 01/06/2022. Tanimoto 20220509
-
-::oRest   := FWRest():New(RTrim(::cURL))        // Instancia classe FwRest |
-::oRest:nTimeOut := 600                         // TimeOut do processo |
-::oRest:SetPath("/api/v2/users" + ::cJSon)         // Metodo a ser enviado | 
-//::oRest:SetPostParams(::cJSon)                  // Parametros de Envio |
-
-If ::oRest:Put(::aHeadOut)                     // Utiliza metodo POST |
-    ::cJSonRet	:= RTrim(::oRest:GetResult())   // Desesserializa JSON |
-    _lRet       := .T.
-Else
-    ::cError    := "Erro ao obter integracoes. Error " + ::oRest:GetLastError() // Desesserializa JSON |
-    _lRet       := .F.
-EndIf
-
-::ClearObj(::oRest)             // Limpa Objeto |
-
-Return _lRet 
