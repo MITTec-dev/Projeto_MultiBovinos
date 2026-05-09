@@ -49,6 +49,7 @@ Class MultiBovinos
     Method Token()
     Method SetPropriedade()
     Method PostCadastros()
+    Method GetCadastros()
 
 EndClass
 
@@ -199,6 +200,7 @@ Return _lRet
 ****************************************************************************************/
 Method PostCadastros() Class MultiBovinos 
     Local _lRet     := .T.
+    Local oJson     := Nil
 
     If Empty(::cToken)
         _lRet := ::Token()                           // Retorna token conexão |
@@ -217,11 +219,53 @@ Method PostCadastros() Class MultiBovinos
 
     If ::oRest:Post(::aHeadOut)                     // Utiliza metodo POST |
         ::cJSonRet := RTrim(::oRest:GetResult())   // Desesserializa JSON |
-        ::oJsonRet := oJson:FromJson(::cJSonRet)
-        ::cID      := Rtrim(oJson:GetJsonObject(::cRet))   // Recupera o ID do cadastro criado/atualizado para retorno, caso haja necessidade de criar outras integrações relacionadas ao mesmo cadastro, como por exemplo, envio de endereço ou contato relacionado a um cadastro de cliente ou fornecedor.
+        oJson := JsonObject():New()
+        oJson:FromJson(::cJSonRet)
+        ::cID := oJson:GetJsonObject(::cRet)   // Recupera o ID do cadastro criado/atualizado para retorno, caso haja necessidade de criar outras integrações relacionadas ao mesmo cadastro, como por exemplo, envio de endereço ou contato relacionado a um cadastro de cliente ou fornecedor.
+        FreeObj(oJson)
         _lRet      := .T.
     Else
-        ::cError    := "Erro ao obter integracoes. Error " + ::oRest:GetLastError() // Desesserializa JSON |
+        ::cError    := "Erro ao obter integracoes. Error " + ::oRest:GetResult()    //::oRest:GetLastError() // Desesserializa JSON |
+        _lRet       := .F.
+    EndIf
+
+    ::ClearObj(::oRest)             // Limpa Objeto |
+
+Return _lRet 
+
+
+/****************************************************************************************
+    {Protheus.doc} GetCadastros
+    @description Metodo para consumir end-poit de cadastros geral
+****************************************************************************************/
+Method GetCadastros() Class MultiBovinos 
+    Local _lRet     := .T.
+    //Local oJson     := Nil
+
+    If Empty(::cToken)
+        _lRet := ::Token()                           // Retorna token conexão |
+    EndIf
+
+    // Array contendo parametros de cabeçalho |
+    ::aHeadOut  := {}
+    aAdd(::aHeadOut,"Content-Type: application/json" )
+    aAdd(::aHeadOut,"Authorization: " + ::cToken)
+    aAdd(::aHeadOut,'User-Agent: Mozilla/5.0 (compatible; Protheus '+GetBuild()+')')    //Adiciona user agente. Obrigatorio a partir de 01/06/2022. Tanimoto 20220509
+
+    ::oRest   := FWRest():New(RTrim(::cURL))        // Instancia classe FwRest |
+    ::oRest:nTimeOut := 600                         // TimeOut do processo |
+    ::oRest:SetPath(::cPath)              // Metodo a ser enviado | 
+    //::oRest:SetPostParams(::cBody)                  // Parametros de Envio | body da requisição
+
+    If ::oRest:GET(::aHeadOut)                     // Utiliza metodo GET |
+        ::cJSonRet := RTrim(::oRest:GetResult())   // Desesserializa JSON |
+        //oJson := JsonObject():New()
+        //oJson:FromJson(::cJSonRet)
+        //::cID := oJson:GetJsonObject(::cRet)   // Recupera o ID do cadastro criado/atualizado para retorno, caso haja necessidade de criar outras integrações relacionadas ao mesmo cadastro, como por exemplo, envio de endereço ou contato relacionado a um cadastro de cliente ou fornecedor.
+        //FreeObj(oJson)
+        _lRet      := .T.
+    Else
+        ::cError    := "Erro ao obter integracoes. Error " + ::oRest:GetResult()    //::oRest:GetLastError() // Desesserializa JSON |
         _lRet       := .F.
     EndIf
 

@@ -36,9 +36,10 @@ User Function mbenvio()
     Local cError := ""
     Local cStZZ0 := ""
     Local cChave := ""
+    Local cRefer := ""
     Local oMultiBV := MultiBovinos():New()
     Local bObject  := {|| JsonObject():New()}
-    Local oJson    := Eval(bObject)
+    Local oJson    := Nil
     Local oenderecos := Eval(bObject)
     Local otelefones := Eval(bObject)
     Local oemails := Eval(bObject)
@@ -67,7 +68,7 @@ User Function mbenvio()
 
     //--------------------------------------------------- FORNECEDORES ---------------------------------------------------
     cQuery := "SELECT A2_COD, A2_LOJA, A2_NOME, A2_NREDUZ, A2_END, A2_CEP, A2_CGC, A2_INSCR, A2_TIPO, "
-    cQuery += "A2_EST, A2_MUN, A2_PAIS, A2_DDD||A2_TEL TELEFONE, A2_EMAIL, A2_INSCRM, A2_BAIRRO "
+    cQuery += "A2_EST, A2_MUN, A2_PAIS, A2_DDD||A2_TEL TELEFONE, A2_EMAIL, A2_INSCRM, A2_BAIRRO, A2_COD_MUN "
     cQuery += "FROM "+RetSqlName("SA2")+" SA2 "
     cQuery += "WHERE SA2.D_E_L_E_T_=' ' "
     cQuery += "AND A2_FILIAL='"+xFilial("SA2")+"' AND A2_XIDMB='' AND A2_XENVMB='1' "
@@ -75,22 +76,23 @@ User Function mbenvio()
     TCSqlToArr(cQuery,@aTabtemp)
 
     For ln := 1 to Len(aTabTemp)
+        oJson := Eval(bObject)   //Cria o objeto
         If aTabtemp[ln][9]=="F" //Pessoa fisica
             oJson["cpf"] := aTabtemp[ln][7]
         Else
             oJson["cnpj"] := aTabtemp[ln][7]
         EndIf
         oJson["categoria"] := "1"
-        oJson["ativo"] := "true"
-        //oJson["municipio"] := Rtrim(aTabtemp[ln][11])
-        //oJson["estado"] := Rtrim(aTabtemp[ln][10])
+        oJson["ativo"] := .T.
+        oJson["municipio"] := Rtrim(aTabtemp[ln][11])
+        oJson["estado"] := Rtrim(aTabtemp[ln][10])
         //oJson["pais"] := Rtrim(aTabtemp[ln][12])
-        //oJson["origem_informacao"]:= "ERP"
-        //oJson["tipo_pessoa"] := Iif(aTabtemp[ln][9]=="J","PJ","PF")
+        oJson["origem_informacao"]:= "ERP"
+        oJson["tipo_pessoa"] := Iif(aTabtemp[ln][9]=="J","PJ","PF")
         oJson["nome"] := Rtrim(aTabtemp[ln][4])
-        //oJson["razao_social"] := Rtrim(aTabtemp[ln][3])
-        //oJson["inscricao_estadual"] := Rtrim(aTabtemp[ln][8])
-        //oJson["inscricao_municipal"] := Rtrim(aTabtemp[ln][15])
+        oJson["razao_social"] := Rtrim(aTabtemp[ln][3])
+        oJson["inscricao_estadual"] := Rtrim(aTabtemp[ln][8])
+        oJson["inscricao_municipal"] := Rtrim(aTabtemp[ln][15])
         ////oJson["rg"] := ""
         ////oJson["data_nascimento"] := "" //precisa ser no formato YYYY-MM-DD, verificar se tem como formatar a data de nascimento do fornecedor nesse formato, ou se é possível criar um campo específico para isso no cadastro do fornecedor
         oJson["codigo_erp"] := aTabtemp[ln][1]+aTabtemp[ln][2]
@@ -103,42 +105,44 @@ User Function mbenvio()
         aadd(aemails, oemails)
         oJson["emails"] := aemails
         oenderecos["cep"] := Rtrim(aTabtemp[ln][6])
-        oenderecos["logradouro"] := Rtrim(aTabtemp[ln][5])
-        oenderecos["numero"] := ""                    
+        oenderecos["logradouro"] := Rtrim(TrataEnd(aTabtemp[ln][5],"L")) //TrataEnd para retirar o complemento do endereço e deixar apenas o logradouro, visto que o endpoint do Multibovinos tem campos separados para logradouro e complemento, e o campo de complemento é opcional, então para evitar erros de integração por conta do tamanho do campo de logradouro, optei por retirar o complemento do campo de logradouro e deixar apenas o nome da rua, avenida, etc no campo de logradouro, e caso haja a necessidade de enviar o complemento, seria necessário criar um campo específico para isso no cadastro do fornecedor.
+        oenderecos["numero"] := TrataEnd(aTabtemp[ln][5],"N")
         oenderecos["bairro"] := Rtrim(aTabtemp[ln][16])
-        oenderecos["principal"] := "true"
+        oenderecos["principal"] := .T.
         oenderecos["tipo"] := "1"
-        oenderecos["cidade"] := "" 
+        oenderecos["cidade"] := Right(aTabtemp[ln][17],3) 
         aadd(aenderecos, oenderecos)
         oJson["enderecos"] := aenderecos
         cJSon := oJson:ToJson()
 
         oMultiBV:cBody := cJSon
         oMultiBV:cPath := "contato/"       //Id do endpoint para envio dos fornecedores
+        oMultiBV:cRet  := "id"
         lRet   := oMultiBV:PostCadastros()      //Executa integração e captura retorno para gravar na tabela de monitoramento
         cError := oMultiBV:cError
         cIdProc:= "0007"                        //Cria um fornecedor no MultiBovinos
-        cChave := "SA2"+aTabtemp[ln][1]+aTabtemp[ln][2]    //Defini como chave o Alias e o conteudo dos campos de indice
+        cChave := xFilial("SA2")+aTabtemp[ln][1]+aTabtemp[ln][2]    //Defini como chave o Alias e o conteudo dos campos de indice
+        cRefer := "SA2"+cChave
         If lRet //Sucesso, grava o ID no cadastro para não enviar novamente e grava o monitoramento com status de sucesso
-            oMultiBV:cRet  := "id"
-            cID            := oMultiBV:cID
+            cID := oMultiBV:cID
             dbSelectArea("SA2")
             SA2->(dbSetOrder(1))
-            SA2->(dbSeek(aTabtemp[ln][1]+aTabtemp[ln][2]))
+            SA2->(dbSeek(cChave))
             If SA2->(Found())
                 RecLock("SA2",.F.)
-                SA2->A2_XIDMB := cID   //Marca o registro como enviado, para não enviar novamente
+                SA2->A2_XIDMB := cValToChar(cID)   //Marca o registro como enviado, para não enviar novamente
                 SA2->(MsUnLock())
             EndIf
             cStZZ0 := "1"      //1=Inclui novo processo na ZZ0
-            U_MBAtuMnt(cIdProc,cChave,cJson,cError,cStZZ0,cFazenda)
+            U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
         Else    //Falha - reenvia
             cStZZ0 := "1"      ///1=Inclui novo processo na ZZ0; 3=Retornado falha - reenvia
-            U_MBAtuMnt(cIdProc,cChave,cJson,cError,cStZZ0,cFazenda)
-            U_MBGRVHST(cIdProc,cChave,cJson,cError)
+            U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
+            U_MBGRVHST(cIdProc,cRefer,cJson,cError)
         EndIf
         FreeObj(oJson)
     Next
+
     //--------------------------------------------------- UNIDADE DE MEDIDAS ---------------------------------------------------
     aTabTemp := {}
     ln := 0
@@ -146,44 +150,51 @@ User Function mbenvio()
     cIdProc:= ""
     cError := ""
     cStZZ0 := ""
+    cRefer := ""
     cChave := ""
     oJson  := Eval(bObject)
     cQuery := "SELECT AH_UNIMED, AH_XIDMB, AH_DESCPO "
     cQuery += "FROM "+RetSqlName("SB1")+" SB1 "
     cQuery += "INNER JOIN "+RetSqlName("SAH")+" SAH ON AH_FILIAL='"+xFilial("SAH")+"' AND AH_UNIMED=B1_UM AND SAH.D_E_L_E_T_='' "
-    cQuery += "WHERE SB1.D_E_L_E_T_=' ' AND B1_XIDMB='' AND B1_XENVMB='1' "
+    cQuery += "WHERE SB1.D_E_L_E_T_=' ' AND B1_XIDMB='' AND B1_XENVMB='1' AND AH_XIDMB='' "
     cQuery += "GROUP BY AH_UNIMED, AH_XIDMB, AH_DESCPO"
+    cQuery := ChangeQuery(cQuery)
     TCSqlToArr(cQuery, @aTabTemp)
     For ln := 1 to Len(aTabTemp)
-        oJson["nome"]          := SubStr(aUMedidas[xx][3], 1, 50)  //Nome da unidade de medida
-        oJson["abreviatura"]   := SubStr(aUMedidas[xx][2], 1, 10)  //Abreviatura da unidade de medida
+        oJson := Eval(bObject)   //Cria o objeto
+        oJson["nome"]          := SubStr(aTabTemp[ln][3], 1, 50)  //Nome da unidade de medida
+        oJson["abreviatura"]   := SubStr(aTabTemp[ln][1], 1, 10)  //Abreviatura da unidade de medida
         oJson["tipo_unidade"]  := "1"                              //Tipo da unidade de medida, 1-Unidade;2-Peso;3-Volume (Litro);4=Metro (MT)
         oJson["multiplicador"] := 1 
         cJSon := oJson:ToJson()
         oMultiBV:cBody := cJSon
         oMultiBV:cPath := "unidadesmedidas/"    //Id do endpoint para envio dos fornecedores
+        oMultiBV:cRet  := "id"
         lRet   := oMultiBV:PostCadastros()      //Executa integração e captura retorno para gravar na tabela de monitoramento
         cError := oMultiBV:cError
         cIdProc:= "0005"   //Cria uma unidade de medida no MultiBovinos 
-        cChave := "SAH"+aTabtemp[ln][1]+aTabtemp[ln][2]    //Defini como chave o Alias e o conteudo dos campos de indice
+        cChave := xFilial("SAH")+aTabtemp[ln][1]    //Defini como chave o Alias e o conteudo dos campos de indice
+        cRefer := "SAH"+cChave
         If lRet //Sucesso, grava o ID no cadastro para não enviar novamente e grava o monitoramento com status de sucesso
+            cID := oMultiBV:cID
             dbSelectArea("SAH")
             SAH->(dbSetOrder(1))
-            SAH->(dbSeek(aTabtemp[ln][1]+aTabtemp[ln][2]))
+            SAH->(dbSeek(cChave))
             If SAH->(Found())
                 RecLock("SAH",.F.)
-                SAH->AH_XIDMB := ""   //Marca o registro como enviado, para não enviar novamente
+                SAH->AH_XIDMB := cValToChar(cID)
                 SAH->(MsUnLock())
             EndIf
             cStZZ0 := "1"      //1=Inclui novo processo na ZZ0
-            U_MBAtuMnt(cIdProc,cChave,cJson,cError,cStZZ0,cFazenda)
+            U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
         Else    //Falha - reenvia
             cStZZ0 := "3"      //3=Retornado falha - reenvia
-            U_MBAtuMnt(cIdProc,cChave,cJson,cError,cStZZ0,cFazenda)
-            U_MBGRVHST(cIdProc,cChave,cJson,cError)
+            U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
+            U_MBGRVHST(cIdProc,cRefer,cJson,cError)
         EndIf
         FreeObj(oJson)
     Next
+
     //--------------------------------------------------- GRUPOS ---------------------------------------------------
     aTabTemp := {}
     ln := 0
@@ -192,40 +203,44 @@ User Function mbenvio()
     cError := ""
     cStZZ0 := ""
     cChave := ""
-    cQuery := "SELECT BM_FILIAL, BM_COD, BM_DESC "
+    cRefer := ""
+    cQuery := "SELECT BM_GRUPO, BM_DESC "
     cQuery += "FROM "+RetSqlName("SB1")+" SB1 "
-    cQuery += "INNER JOIN "+RetSqlName("SBM")+" SBM ON BM_FILIAL='"+xFilial("SBM")+"' AND B1_GRUPO=BM_COD AND SBM.D_E_L_E_T_='' "
-    cQuery += "WHERE SB1.D_E_L_E_T_=' ' AND B1_XIDMB='' AND B1_XENVMB='1' "
-    cQuery += "GROUP BY BM_FILIAL, BM_COD, BM_DESC"
+    cQuery += "INNER JOIN "+RetSqlName("SBM")+" SBM ON BM_FILIAL='"+xFilial("SBM")+"' AND B1_GRUPO=BM_GRUPO AND SBM.D_E_L_E_T_='' "
+    cQuery += "WHERE SB1.D_E_L_E_T_=' ' AND B1_XIDMB='' AND B1_XENVMB='1' AND BM_XIDMB='' "
+    cQuery += "GROUP BY BM_FILIAL, BM_GRUPO, BM_DESC"
+    cQuery := ChangeQuery(cQuery)
     TCSqlToArr(cQuery, @aTabTemp)
     For ln := 1 to Len(aTabTemp)
-        //"{\n\t\"nome\": \"AGREGADOS TESTE INTEGRACAO\",\n\t\"ativo\": true,\n\t\"tipo\": 2\n}"
         oJson  := Eval(bObject)
-        oJson["nome"]  := SubStr(aUMedidas[xx][2], 1, 50)  //Nome da unidade de medida
+        oJson["nome"]  := SubStr(aTabTemp[ln][2], 1, 50)  //Nome da unidade de medida
         oJson["ativo"] := "true"
         oJson["tipo"]  := 2
         cJSon := oJson:ToJson()
         oMultiBV:cBody := cJSon
         oMultiBV:cPath := "grupomaterial/"   //Id do endpoint para envio dos fornecedores
+        oMultiBV:cRet  := "id"
         lRet   := oMultiBV:PostCadastros()  //Executa integração e captura retorno para gravar na tabela de monitoramento
         cError := oMultiBV:cError
         cIdProc:= "0003"   //Cria um fornecedor no MultiBovinos
-        cChave := "SBM"+aTabtemp[ln][1]    //Defini como chave o Alias e o conteudo dos campos de indice
-        If lRet //Sucesso, grava o ID no cadastro para não enviar novamente e grava o monitoramento com status de sucesso
+        cChave := xFilial("SBM")+aTabtemp[ln][1]    //Defini como chave o Alias e o conteudo dos campos de indice
+        cRefer := "SBM"+cChave
+        If lRet //Sucesso, grava o ID no cadastro para não enviar novamente e grava o monitoramento com status de suce
+            cID := oMultiBV:cID
             dbSelectArea("SBM")
             SBM->(dbSetOrder(1))
-            SBM->(dbSeek(aTabtemp[ln][1]+aTabtemp[ln][2]))
+            SBM->(dbSeek(cChave))
             If SBM->(Found())
                 RecLock("SBM",.F.)
-                SBM->BM_XIDMB := ""   //Marca o registro como enviado, para não enviar novamente
+                SBM->BM_XIDMB := cValToChar(cID)   //Marca o registro como enviado, para não enviar novamente
                 SBM->(MsUnLock())
             EndIf
             cStZZ0 := "1"      //1=Inclui novo processo na ZZ0
-            U_MBAtuMnt(cIdProc,cChave,cJson,cError,cStZZ0,cFazenda)
+            U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
         Else    //Falha - reenvia
             cStZZ0 := "3"      //3=Retornado falha - reenvia
-            U_MBAtuMnt(cIdProc,cChave,cJson,cError,cStZZ0,cFazenda)
-            U_MBGRVHST(cIdProc,cChave,cJson,cError)
+            U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
+            U_MBGRVHST(cIdProc,cRefer,cJson,cError)
         EndIf
         FreeObj(oJson)
     Next
@@ -238,43 +253,34 @@ User Function mbenvio()
     cError := ""
     cStZZ0 := ""
     cChave := ""
-    cQuery := "ZZ3_COD, ZZ3_DESC "
-    cQuery += "FROM "+RetSqlName("SB1")+" SB1 "
-    cQuery += "INNER JOIN "+RetSqlName("ZZ3")+" ZZ3 ON ZZ3_FILIAL='"+xFilial("ZZ3")+"' AND ZZ3_COD=B1_XSGRUPO AND ZZ3.D_E_L_E_T_='' "
-    cQuery += "WHERE SB1.D_E_L_E_T_=' ' AND B1_XIDMB='' AND B1_XENVMB='1' "
-    cQuery += "GROUP BY ZZ3_COD, ZZ3_DESC"
-    TCSqlToArr(cQuery, @aTabTemp)
-    For ln := 1 to Len(aTabTemp)
-        //"{\n    \"nome\": \"FUNGICIDAS TESTE INTEGRACAO\",\n    \"grupo_material\": null\n}"
-        oJson  := Eval(bObject)
-        oJson["nome"]          := SubStr(aUMedidas[xx][3], 1, 50)  //Nome da unidade de medida
-        oJson["grupo_material"]:= "null"    //SubStr(aUMedidas[xx][2], 1, 10)  //Abreviatura da unidade de medida
-        cJSon := oJson:ToJson()
-        oMultiBV:cBody := cJSon
-        oMultiBV:cPath := "subgrupomaterial/"   //Id do endpoint para envio dos subgrupos
-        lRet   := oMultiBV:PostCadastros()      //Executa integração e captura retorno para gravar na tabela de monitoramento
-        cError := oMultiBV:cError
-        cIdProc:= "0004"   //Cria um SUBGRUPO de produto no MultiBovinos
-        cChave := "ZZ3"+aTabtemp[ln][1]    //Defini como chave o Alias e o conteudo dos campos de indice
-        If lRet //Sucesso, grava o ID no cadastro para não enviar novamente e grava o monitoramento com status de sucesso
+    cRefer := ""
+    cQuery := ""
+
+    oMultiBV:cPath := "subgrupomaterial/"   //Id do endpoint para envio dos subgrupos
+    lRet   := oMultiBV:GetCadastros()      //Executa integração e captura retorno para gravar na tabela de monitoramento
+    cError := oMultiBV:cError
+    If lRet //Sucesso, grava o ID no cadastro para não enviar novamente e grava o monitoramento com status de suces
+        cJson  := oMultiBV:cJSonRet   
+        oJson := Eval(bObject)
+        oJson:FromJson(cJSon)
+        aTabTemp := oJson:GetJsonObject("results") //Recupera o grupo do material para enviar junto com o subgrupo, visto que o endpoint do Multibovinos necessita do ID do grupo para criar o subgrupo, e como o grupo e o subgrupo estão sendo criado no mesmo processo, preciso recuperar o ID do grupo para enviar junto com o subgrupo.
+        For ln := 1 to Len(aTabTemp)
+            //oJsonIt := Eval(bObject)
+            //oJsonIt:FromJson(ToJson(aTabTemp[ln]))
             dbSelectArea("ZZ3")
             ZZ3->(dbSetOrder(1))
-            ZZ3->(dbSeek(aTabtemp[ln][1]+aTabtemp[ln][2]))
-            If ZZ3->(Found())
-                RecLock("ZZ3",.F.)
-                ZZ3->ZZ3_XIDMB := ""   //Marca o registro como enviado, para não enviar novamente
+            ZZ3->(dbSeek(xFilial("ZZ3")+Padr(cValToChar(aTabTemp[ln]["id"]),TamSx3("ZZ3_COD")[1])))
+            If ZZ3->(!Found())
+                RecLock("ZZ3",.T.)
+                Replace ZZ3_FILIAL  With xFilial("ZZ3") 
+                Replace ZZ3_COD     With cValToChar(aTabTemp[ln]["id"])
+                Replace ZZ3_DESC    With aTabTemp[ln]["nome"]
                 ZZ3->(MsUnLock())
             EndIf
-            cStZZ0 := "1"      //1=Inclui novo processo na ZZ0
-            U_MBAtuMnt(cIdProc,cChave,cJson,cError,cStZZ0,cFazenda)
-        Else    //Falha - reenvia
-            cStZZ0 := "3"      //3=Retornado falha - reenvia
-            U_MBAtuMnt(cIdProc,cChave,cJson,cError,cStZZ0,cFazenda)
-            U_MBGRVHST(cIdProc,cChave,cJson,cError)
-        EndIf
+        Next
         FreeObj(oJson)
-    Next
-
+    EndIf
+ 
     //--------------------------------------------------- PRODUTOS ---------------------------------------------------
     aTabTemp := {}
     ln := 0
@@ -283,72 +289,65 @@ User Function mbenvio()
     cError := ""
     cStZZ0 := ""
     cChave := ""
-    cQuery := "SELECT B1_COD, B1_DESC, BM_XIDMB, ZZ3_XIDMB, AH_XIDMB "
+    cRefer := ""
+    cQuery := "SELECT B1_COD, B1_DESC, BM_XIDMB, ZZ3_COD, AH_XIDMB "
     cQuery += "FROM "+RetSqlName("SB1")+" SB1 "
     cQuery += "INNER JOIN "+RetSqlName("SAH")+" SAH ON AH_FILIAL='"+xFilial("SAH")+"' AND AH_UNIMED=B1_UM AND SAH.D_E_L_E_T_='' "
-    cQuery += "INNER JOIN "+RetSqlName("SBM")+" SBM ON BM_FILIAL='"+xFilial("SBM")+"' AND B1_GRUPO=BM_COD AND SBM.D_E_L_E_T_='' "
+    cQuery += "INNER JOIN "+RetSqlName("SBM")+" SBM ON BM_FILIAL='"+xFilial("SBM")+"' AND B1_GRUPO=BM_GRUPO AND SBM.D_E_L_E_T_='' "
     cQuery += "INNER JOIN "+RetSqlName("ZZ3")+" ZZ3 ON ZZ3_FILIAL='"+xFilial("ZZ3")+"' AND ZZ3_COD=B1_XSGRUPO AND ZZ3.D_E_L_E_T_='' "
-    cQuery += "WHERE SB1.D_E_L_E_T_=' ' AND B1_XIDMB='' AND B1_XENVMB='1' AND AH_XIDMB<>'' AND ZZ3_XIDMB<>'' "
+    cQuery += "WHERE SB1.D_E_L_E_T_=' ' AND B1_XIDMB='' AND B1_XENVMB='1' AND BM_XIDMB<>'' AND AH_XIDMB<>'' "
+    cQuery := ChangeQuery(cQuery)
     TCSqlToArr(cQuery, @aTabTemp)
     For ln := 1 to Len(aTabTemp)
-        //"{\n\n    \"nome\": \"ACETAN TESTE INTEGRACAO\",\n    \"abreviatura\": \"ACETAN TTT\",\n    \"codigo_material\": null,\n    \"fabricante\": null,\n    \"preco_custo_material\": 0.0,\n    \"codigo_fabricante\": null,\n    \"grupo_material\": -2,\n    \"subgrupo_material\": -9,\n    \"unidade_medida_compra\": 7,\n    \"unidade_medida_uso\": 7,\n    \"unidade_medida_venda_transf\": 7,\n    \"preco_medio_compra\": 1.74435028248588,\n    \"consumo_diario_recomendado\": null,\n    \"estoque_minimo\": null,\n    \"observacoes\": null,\n    \"tipo_dose\": 1,\n    \"dose_por_peso\": 1.5,\n    \"peso_para_dose\": 1.3,\n    \"ativo\": true\n}"
         oJson  := Eval(bObject)
-        oJson["nome"]           := SubStr(aUMedidas[ln][2], 1, 50)  //Nome da unidade de medida
-        oJson["abreviatura"]    := SubStr(aUMedidas[ln][1], 1, 15)  //Nome da unidade de medida
-        oJson["codigo_material"]  := "null"
-        oJson["fabricante"]  := "null"
-        oJson["preco_custo_material"]  := "0.0"
-        oJson["codigo_fabricante"]  := "null"
-        oJson["grupo_material"]  := aUMedidas[ln][3]        //BM_XIDMB
-        oJson["subgrupo_material"]  := aUMedidas[ln][4]     //ZZ3_XIDMB
-        oJson["unidade_medida_compra"]  := aUMedidas[ln][5] //AH_XIDMB
-        oJson["unidade_medida_uso"]  := aUMedidas[ln][5] //AH_XIDMB
-        oJson["unidade_medida_venda_transf"]  := aUMedidas[ln][5] //AH_XIDMB
-        oJson["preco_medio_compra"]  := "0.00"
-        oJson["consumo_diario_recomendado"]  := "null"
-        oJson["estoque_minimo"]  := "null"
-        oJson["observacoes"]  := "null"
-        oJson["tipo_dose"]  := "0.0"
-        oJson["dose_por_peso"]  := "0.0"
-        oJson["peso_para_dose"]  := "0.0"
-        oJson["ativo"]  := "true"
+        oJson["nome"]           := SubStr(aTabTemp[ln][2], 1, 50)  //Nome da unidade de medida
+        oJson["abreviatura"]    := SubStr(aTabTemp[ln][1], 1, 15)  //Codigo do produto no ERP
+        oJson["codigo_material"]  := Alltrim(aTabTemp[ln][1])  //Nome da unidade de medida
+        //oJson["fabricante"]  := ""
+        //oJson["preco_custo_material"]  := 0.0
+        //oJson["codigo_fabricante"]  := ""
+        oJson["grupo_material"]  := Alltrim(aTabTemp[ln][3])                     //BM_XIDMB
+        oJson["subgrupo_material"]  := Alltrim(aTabTemp[ln][4])                  //B1_XSGRUPO
+        oJson["unidade_medida_compra"]  := Alltrim(aTabTemp[ln][5])              //AH_XIDMB
+        oJson["unidade_medida_uso"]  := Alltrim(aTabTemp[ln][5])                 //AH_XIDMB
+        oJson["unidade_medida_venda_transf"]  := Alltrim(aTabTemp[ln][5])        //AH_XIDMB
+        //oJson["preco_medio_compra"]  := 0.00
+        //oJson["consumo_diario_recomendado"]  := 0.00
+        //oJson["estoque_minimo"]  := 0.00
+        //oJson["observacoes"]  := ""
+        //oJson["tipo_dose"]  := 0.0
+        //oJson["dose_por_peso"]  := "0.0"
+        //oJson["peso_para_dose"]  := "0.0"
+        oJson["ativo"]  := .T.
+        oJson["origem_informacao"]:= "ERP"
+        oJson["codigo_erp"] := Alltrim(aTabTemp[ln][1])
         cJSon := oJson:ToJson()
 
         oMultiBV:cBody := cJSon
         oMultiBV:cPath := "materiais/"      //Id do endpoint para envio dos produtos
+        oMultiBV:cRet  := "id"
         lRet   := oMultiBV:PostCadastros()  //Executa integração e captura retorno para gravar na tabela de monitoramento
         cError := oMultiBV:cError
         cIdProc:= "0006"   //Cria um fornecedor no MultiBovinos
-        cChave := "SB1"+aTabtemp[ln][1]    //Defini como chave o Alias e o conteudo dos campos de indice
+        cChave := xFilial("SB1")+aTabtemp[ln][1]    //Defini como chave o Alias e o conteudo dos campos de indice
+        cRefer := "SB1"+cChave
         If lRet //Sucesso, grava o ID no cadastro para não enviar novamente e grava o monitoramento com status de sucesso
+            cID := oMultiBV:cID
             dbSelectArea("SB1")
             SB1->(dbSetOrder(1))
-            SB1->(dbSeek(aTabtemp[ln][1]+aTabtemp[ln][2]))
+            SB1->(dbSeek(cChave))
             If SB1->(Found())
                 RecLock("SB1",.F.)
-                SB1->B1_XIDMB := ""   //Marca o registro como enviado, para não enviar novamente
+                SB1->B1_XIDMB := cValToChar(cID)   //Marca o registro como enviado, para não enviar novamente
                 SB1->(MsUnLock())
             EndIf
             cStZZ0 := "1"      //1=Inclui o processo na ZZ0 como finalizado
-            U_MBAtuMnt(cIdProc,cChave,cJson,cError,cStZZ0,cFazenda)
+            U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
         Else    //Falha - reenvia
             cStZZ0 := "3"      //3=Retornado falha - reenvia
-            U_MBAtuMnt(cIdProc,cChave,cJson,cError,cStZZ0,cFazenda)
-            U_MBGRVHST(cIdProc,cChave,cJson,cError)
+            U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
+            U_MBGRVHST(cIdProc,cRefer,cJson,cError)
         EndIf
         FreeObj(oJson)
     Next
 Return
-
-//entrada_material
-//"{\n\t\"propriedade\": 55080,\n\t\"documento\": \"10\",\n\t\"data\": \"2020-06-24T03:00:00.000Z\",\n\t\"forma_pagamento\": 2082,\n\t\"contato\": 944375,\n\t\"responsavel\": 944375,\n\t\"valor_desconto\": 10.0,\n\t\"percentual_desconto\": 20,\n\t\"conta_imposto\": null,\n\t\"valor_imposto\": 0,\n\t\"documento_frete\": null,\n\t\"valor_frete\": 0,\n\t\"fornecedor_frete\": null,\n\t\"forma_pagamento_frete\": null,\n\t\"valor_total\": 50,\n\t\"valor_pagamento\": 40,\n\t\"itens\": [\n\t\t{\n\t\t\t\"produto\": 275226,\n\t\t\t\"quantidade\": 2,\n\t\t\t\"valor_unitario\": 12.5,\n\t\t\t\"valor_total\": 25,\n\t\t\t\"valor_desconto\": 2.50,\n\t\t\t\"percentual_desconto\": 5.00,\n\t\t\t\"valor_final\": 20,\n\t\t\t\"valor_frete\": 0.00,\n\t\t\t\"observacao\": null\n\t\t},\n\t\t{\n\t\t\t\"produto\": 275217,\n\t\t\t\"quantidade\": 2,\n\t\t\t\"valor_unitario\": 12.5,\n\t\t\t\"valor_total\": 25,\n\t\t\t\"valor_desconto\": 2.50,\t\n\t\t\t\"percentual_desconto\": 5.00,\n\t\t\t\"valor_final\": 20,\n\t\t\t\"valor_frete\": 0.00,\n\t\t\t\"observacao\": \"teste\"\n\t\t}\n\t]\n}"
-
-/*
-    cQuery := "SELECT B1_COD, B1_DESC, B1_UM, B1_XSGRUPO, "
-    cQuery += "AH_UNIMED, AH_XIDMB, AH_DESCPO, "
-    cQuery += "ZZ3_COD "
-    cQuery += "FROM "+RetSqlName("SB1")+" SB1 "
-    cQuery += "INNER JOIN "+RetSqlName("SAH")+" SAH ON AH_FILIAL='"+xFilial("SAH")+"' AND AH_UNIMED=B1_UM AND SAH.D_E_L_E_T_='' "
-    cQuery += "INNER JOIN "+RetSqlName("ZZ3")+" ZZ3 ON ZZ3_FILIAL='"+xFilial("ZZ3")+"' AND ZZ3_COD=B1_XSGRUPO AND ZZ3.D_E_L_E_T_='' "
-    cQuery += "WHERE SB1.D_E_L_E_T_=' ' AND B1_XIDMB='' AND B1_XENVMB='1' "
-*/
