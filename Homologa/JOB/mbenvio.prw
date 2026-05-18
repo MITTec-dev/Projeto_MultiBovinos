@@ -1,3 +1,4 @@
+#include "totvs.ch"
 /*************************************************************************************************************
     mbenvio.prw - Envio de dados para integração com Multibovinos
     Verifica as integrações a serem enviadas para o Multibovinos, buscando os dados nas tabelas do Protheus e 
@@ -47,9 +48,13 @@ User Function mbenvio()
     Local atelefones := {}
     Local aemails := {}
     Local cFazenda := Alltrim(Posicione("ZZ2",1,cFilAnt,"ZZ2_FAZENDA"))
+    Local lIsBlind := IsBlind()
+    //Local lLogEmail := SuperGETMV("MV_MBLOGEML",.F.,.F.) //Flag para envio de email em caso de erro na integração, 1 para enviar email e 0 para não enviar.
 
 
     //--------------------------------------------------- SETA PROPRIEDADE PARA INICIAR INTEGRACOES ----------------------------------
+    cIdProc:= "0001"     //Seta propriedade
+    cRefer := cFilAnt
     oMultiBV:cPath := "selecione-propriedade/"   //Id do usuario para consulta de propriedades disponiveis. Necessario para o envio do produto, caso haja alguma configuração errada, o retorno será falso e não prosseguirá com o envio dos dados.
     oMultiBV:cBody := "usuario/"+cFazenda+"/"
     //oMultiBV:cRet  := "dados"
@@ -57,11 +62,11 @@ User Function mbenvio()
     lRet := oMultiBV:SetPropriedade()
     If lRet //Sucesso, grava o ID no cadastro para não enviar novamente e grava o monitoramento com status de sucesso
         cStZZ0 := "1"      //1=Inclui novo processo na ZZ0
-        U_MBAtuMnt("0001",cFilAnt,cJson,cError,cStZZ0,cFazenda)
+        U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
     Else    //Falha - reenvia
         cStZZ0 := "3"      //3=Retornado falha - reenvia
-        U_MBAtuMnt("0001",cFilAnt,cJson,cError,cStZZ0,cFazenda)
-        U_MBGRVHST("0001",cFilAnt,cJson,cError)
+        U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
+        U_MBGRVHST(cIdProc,cRefer,cJson,cError)
     EndIf
     //--------------------------------------------------- FIM SETA PROPRIEDADE PARA INICIAR INTEGRACOES ----------------------------------
 
