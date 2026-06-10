@@ -50,6 +50,7 @@ Class MultiBovinos
     Method SetPropriedade()
     Method PostCadastros()
     Method GetCadastros()
+    Method PutCadastros()
 
 EndClass
 
@@ -58,12 +59,20 @@ EndClass
     @description Metodo construtor da Classe 
 ****************************************************************************************/
 Method New() Class MultiBovinos
-    
-    ::cURL          := GetNewPar("MB_XMBURLP","https://teste.multbovinos.com/servicos")    //https://www.multbovinos.com/servicos,
-    ::cUser         := GetNewPar("MB_XMBCLIE","integracao.default@multbovinos.com.br")
-    ::cPassword     := GetNewPar("MB_XMBPASS","testeintegracao@Mbweb")
-    //::cDirToken     := GetNewPar("BZ_DIRENAB","\MultiBovinos_token\")
-    //::cFileToken    := GetNewPar("BZ_ARQENAB","MultiBovinos_token")
+    Local cEnvProd := SuperGETMV("MB_XMBENVP",.F.,"CMPKQ0_PROD,CMPKQ0_COMP") //nome dos ambientes de produção
+    Local cEnvTest := SuperGETMV("MB_XMBENVT",.F.,"CMPKQ0_DEV2,CMPKQ0_DEV") //nome dos ambientes de testes,desenv
+    Local cEnvExec := Upper(Alltrim(GetEnvServer())) //variável de ambiente para identificar ambiente atual, exemplo: TESTE, DESENV, PRODUCAO, etc.
+
+    If cEnvExec $ cEnvProd 
+        ::cURL          := GetNewPar("MB_XMBURLP","https://www.multbovinos.com/servicos")
+        ::cUser         := GetNewPar("MB_XMBCLIP","integracao.default@multbovinos.com.br")
+        ::cPassword     := GetNewPar("MB_XMBPASP","integracao@Mbweb")
+    ElseIf cEnvExec $ cEnvTest
+        ::cURL          := GetNewPar("MB_XMBURLT","https://teste.multbovinos.com/servicos")
+        ::cUser         := GetNewPar("MB_XMBCLIT","integracao.default@multbovinos.com.br")
+        ::cPassword     := GetNewPar("MB_XMBPAST","testeintegracao@Mbweb")
+    EndIf
+
     ::cJSonRet      := ""
     ::cBody         := ""
     ::cPath         := ""
@@ -115,17 +124,25 @@ Return FreeObj(_oObj)
 
 /****************************************************************************************
     {Protheus.doc} Token
-    @description Metodo obtem Token para integraçao MultiBovinos 
+    @description Metodo obtem Token para integraçao MultiBovinos
+    https://terminaldeinformacao.com/2024/02/24/formatando-data-e-hora-com-a-fwtimestamp-maratona-advpl-e-tl-255/
 ****************************************************************************************/
 Method Token() Class MultiBovinos
 
     Local _lRet   := .T.
-    Local _lToken := .T.
+    Local _lToken := .F.
     Local bObject := {|| JsonObject():New()}
     Local oJson   := Eval(bObject)
+    Local aToken  := StrTokArr(SuperGetMV("MB_XMBTOKE",.F.,""),";")//Grava token,aaaammddhhmmss - para reutilização do token enquanto estiver válido, evitando consultas desnecessárias para obtenção de token. O formato da data é utilizado para comparação e validação da validade do token, que tem duração de 24 horas. Tanimoto 20220509
     
     ::GetSSLCache()
-    
+
+    If Len(aToken)=2    //Tem token gravado, verifica validade do token para reutilização, evitando consultas desnecessárias para obtenção de token. Tanimoto 20220509
+        _lToken := Alltrim(FWTimeStamp(1,dDatabase,Time()))>=Alltrim(aToken[2])
+    ElseIf Len(aToken)=1    //Nao tem toke gravado
+        _lToken := Empty(aToken[1]) 
+    EndIf
+
     // Consulta novo Token |
     If _lToken
         oJson["email"]    := Alltrim(::cUser)
@@ -142,11 +159,15 @@ Method Token() Class MultiBovinos
             ::cJSonRet := RTrim(::oRest:GetResult())               // Desesserializa JSON |
             ::oJsonRet := oJson:FromJson(::cJSonRet)
             ::cToken   := "JWT "+Rtrim(oJson:GetJsonObject("token"))
+            PutMV("MB_XMBTOKE",::cToken +";"+ Alltrim(FWTimeStamp(1,dDatabase+1,Time()))) //Grava token com data de validade de 24 horas para reutilização, evitando consultas desnecessárias para obtenção de token.
             _lRet      := .T.
         Else
             ::cError    := "Erro ao validar token. Error " + ::oRest:GetLastError()         // Desesserializa JSON |
             _lRet       := .F.
         EndIf
+    Else
+        ::cToken := aToken[1] //Utiliza token gravado anteriormente enquanto estiver válido para evitar consultas desnecessárias para obtenção de token.
+        _lRet := .T.
     EndIf
     
     // Limpa Objeto |
@@ -185,7 +206,7 @@ Method SetPropriedade() Class MultiBovinos
             //::cID      := Rtrim(oJson:GetJsonObject(::cRet))
             _lRet      := .T.
         Else
-            ::cError    := RTrim(::oRest:GetResult())   //"Erro ao obter integracoes. Error " + ::oRest:GetLastError() // Desesserializa JSON |
+            ::cError    := RTrim(::oRest:GetResult())   
             _lRet       := .F.
         EndIf
     
@@ -225,7 +246,7 @@ Method PostCadastros() Class MultiBovinos
         FreeObj(oJson)
         _lRet      := .T.
     Else
-        ::cError    := "Erro ao obter integracoes. Error " + ::oRest:GetResult()    //::oRest:GetLastError() // Desesserializa JSON |
+        ::cError    := "Erro Post: " + ::oRest:GetResult()    //::oRest:GetLastError() // Desesserializa JSON |
         _lRet       := .F.
     EndIf
 
@@ -265,7 +286,7 @@ Method GetCadastros() Class MultiBovinos
         //FreeObj(oJson)
         _lRet      := .T.
     Else
-        ::cError    := "Erro ao obter integracoes. Error " + ::oRest:GetResult()    //::oRest:GetLastError() // Desesserializa JSON |
+        ::cError    := "Erro Get: " + ::oRest:GetResult()    //::oRest:GetLastError() // Desesserializa JSON |
         _lRet       := .F.
     EndIf
 
@@ -273,3 +294,47 @@ Method GetCadastros() Class MultiBovinos
 
 Return _lRet 
 
+/****************************************************************************************
+    {Protheus.doc} PutCadastros
+    @description Metodo para consumir end-poit de cadastros geral
+****************************************************************************************/
+Method PutCadastros() Class MultiBovinos 
+    Local _lRet     := .T.
+    Local oJson     := Nil
+
+
+    If Empty(::cToken)
+        _lRet := ::Token()                           // Retorna token conexão |
+    EndIf
+
+
+    // Array contendo parametros de cabeçalho |
+    ::aHeadOut  := {}
+    aAdd(::aHeadOut,"Content-Type: application/json" )
+    aAdd(::aHeadOut,"Authorization: " + ::cToken)
+    aAdd(::aHeadOut,'User-Agent: Mozilla/5.0 (compatible; Protheus '+GetBuild()+')')    //Adiciona user agente. Obrigatorio a partir de 01/06/2022. Tanimoto 20220509
+
+
+    ::oRest   := FWRest():New(RTrim(::cURL))        // Instancia classe FwRest |
+    ::oRest:nTimeOut := 600                         // TimeOut do processo |
+    ::oRest:SetPath(::cPath)              // Metodo a ser enviado | 
+    ::oRest:SetPostParams(::cBody)                  // Parametros de Envio | body da requisição
+
+
+    If ::oRest:Put(::aHeadOut)                     // Utiliza metodo PUT |
+        ::cJSonRet := RTrim(::oRest:GetResult())   // Desesserializa JSON |
+        oJson := JsonObject():New()
+        oJson:FromJson(::cJSonRet)
+        ::cID := oJson:GetJsonObject(::cRet)   // Recupera o ID do cadastro criado/atualizado para retorno, caso haja necessidade de criar outras integrações relacionadas ao mesmo cadastro, como por exemplo, envio de endereço ou contato relacionado a um cadastro de cliente ou fornecedor.
+        FreeObj(oJson)
+        _lRet      := .T.
+    Else
+        ::cError    := "Erro Put: " + ::oRest:GetResult()    //::oRest:GetLastError() // Desesserializa JSON |
+        _lRet       := .F.
+    EndIf
+
+
+    ::ClearObj(::oRest)             // Limpa Objeto |
+
+
+Return _lRet 

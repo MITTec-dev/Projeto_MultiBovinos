@@ -57,6 +57,7 @@ Method New() Class mbMonitor
     ::cFunName      := ""
     ::cErrorRet     := ""
     ::cFazenda      := ""
+    ::cJSonRet      := ""
 
     ::nTpGrava      := 0
     ::nTpRet        := 0
@@ -75,9 +76,7 @@ Method ValidZZ0() Class mbMonitor
     Local _cQuery   := ""
     Local _cAlias   := ""
 
-    //---------+
     // Monitor |
-    //---------+
     _cQuery := " SELECT " + CRLF 
     _cQuery += "    COALESCE(MAX(ZZ0_SEQ),'0000') SEQ, " + CRLF 
     _cQuery += "    COALESCE(MAX(ZZ0_TENTAT),0) TENTATIVA " + CRLF 
@@ -178,6 +177,7 @@ Method GrvMonitor() Class mbMonitor
         ZZ0->ZZ0_HRPFIM := ""
         ZZ0->ZZ0_STPROC := ::cStatus
         ZZ0->ZZ0_TENTAT := ::nTentativa
+        ZZ0->ZZ0_JSONRE := ::cJSonRet
         //ZZ0->ZZ0_QTDREG := ::nQtdReg
         //ZZ0->ZZ0_ERPFUN := ::cFunName
         //ZZ0->ZZ0_FAZEND := ::cFazenda

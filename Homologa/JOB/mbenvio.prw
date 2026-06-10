@@ -33,6 +33,7 @@ User Function mbenvio()
     Local lRet  := .F.
     Local ln := 0
     Local cJSon :=  ""
+    Local cJsonRet := ""
     Local cIdProc:= ""
     Local cError := ""
     Local cStZZ0 := ""
@@ -48,8 +49,8 @@ User Function mbenvio()
     Local atelefones := {}
     Local aemails := {}
     Local cFazenda := Alltrim(Posicione("ZZ2",1,cFilAnt,"ZZ2_FAZENDA"))
-    Local lIsBlind := IsBlind()
-    //Local lLogEmail := SuperGETMV("MV_MBLOGEML",.F.,.F.) //Flag para envio de email em caso de erro na integração, 1 para enviar email e 0 para não enviar.
+    //Local lIsBlind := IsBlind()
+    //Local lLogEmail := SuperGETMV("MB_MBLOGEML",.F.,.F.) //Flag para envio de email em caso de erro na integração, 1 para enviar email e 0 para não enviar.
 
 
     //--------------------------------------------------- SETA PROPRIEDADE PARA INICIAR INTEGRACOES ----------------------------------
@@ -62,7 +63,8 @@ User Function mbenvio()
     lRet := oMultiBV:SetPropriedade()
     If lRet //Sucesso, grava o ID no cadastro para não enviar novamente e grava o monitoramento com status de sucesso
         cStZZ0 := "1"      //1=Inclui novo processo na ZZ0
-        U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
+        cJsonRet := oMultiBV:cJsonRet
+        U_MBAtuMnt(cIdProc,cRefer,cJson,cJsonRet,cStZZ0,cFazenda)
     Else    //Falha - reenvia
         cStZZ0 := "3"      //3=Retornado falha - reenvia
         U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
@@ -101,23 +103,29 @@ User Function mbenvio()
         ////oJson["rg"] := ""
         ////oJson["data_nascimento"] := "" //precisa ser no formato YYYY-MM-DD, verificar se tem como formatar a data de nascimento do fornecedor nesse formato, ou se é possível criar um campo específico para isso no cadastro do fornecedor
         oJson["codigo_erp"] := aTabtemp[ln][1]+aTabtemp[ln][2]
-        otelefones["numero"] :=   Rtrim(aTabtemp[ln][13])
-        otelefones["descricao"] := "Telefone 1"
-        aadd(atelefones, otelefones)
-        oJson["telefones"] := atelefones
-        oemails["email"] :=  Rtrim(aTabtemp[ln][14])
-        oemails["descricao"] := "Email 1"
-        aadd(aemails, oemails)
-        oJson["emails"] := aemails
-        oenderecos["cep"] := Rtrim(aTabtemp[ln][6])
-        oenderecos["logradouro"] := Rtrim(TrataEnd(aTabtemp[ln][5],"L")) //TrataEnd para retirar o complemento do endereço e deixar apenas o logradouro, visto que o endpoint do Multibovinos tem campos separados para logradouro e complemento, e o campo de complemento é opcional, então para evitar erros de integração por conta do tamanho do campo de logradouro, optei por retirar o complemento do campo de logradouro e deixar apenas o nome da rua, avenida, etc no campo de logradouro, e caso haja a necessidade de enviar o complemento, seria necessário criar um campo específico para isso no cadastro do fornecedor.
-        oenderecos["numero"] := TrataEnd(aTabtemp[ln][5],"N")
-        oenderecos["bairro"] := Rtrim(aTabtemp[ln][16])
-        oenderecos["principal"] := .T.
-        oenderecos["tipo"] := "1"
-        oenderecos["cidade"] := Right(aTabtemp[ln][17],3) 
-        aadd(aenderecos, oenderecos)
-        oJson["enderecos"] := aenderecos
+        If !Empty(Rtrim(aTabtemp[ln][13]))
+            otelefones["numero"] :=   Rtrim(aTabtemp[ln][13])
+            otelefones["descricao"] := "Telefone 1"
+            aadd(atelefones, otelefones)
+            oJson["telefones"] := atelefones
+        EndIf
+        If !Empty(Rtrim(aTabtemp[ln][14]))
+            oemails["email"] :=  Rtrim(aTabtemp[ln][14])
+            oemails["descricao"] := "Email 1"'
+            aadd(aemails, oemails)
+            oJson["emails"] := aemails
+        EndIf
+        If !Empty(Rtrim(aTabtemp[ln][5]))
+            oenderecos["cep"] := Rtrim(aTabtemp[ln][6])
+            oenderecos["logradouro"] := Rtrim(TrataEnd(aTabtemp[ln][5],"L")) //TrataEnd para retirar o complemento do endereço e deixar apenas o logradouro, visto que o endpoint do Multibovinos tem campos separados para logradouro e complemento, e o campo de complemento é opcional, então para evitar erros de integração por conta do tamanho do campo de logradouro, optei por retirar o complemento do campo de logradouro e deixar apenas o nome da rua, avenida, etc no campo de logradouro, e caso haja a necessidade de enviar o complemento, seria necessário criar um campo específico para isso no cadastro do fornecedor.
+            oenderecos["numero"] := TrataEnd(aTabtemp[ln][5],"N")
+            oenderecos["bairro"] := Rtrim(aTabtemp[ln][16])
+            oenderecos["principal"] := .T.
+            oenderecos["tipo"] := "1"
+            oenderecos["cidade"] := Right(aTabtemp[ln][17],3) 
+            aadd(aenderecos, oenderecos)
+            oJson["enderecos"] := aenderecos
+        EndIf
         cJSon := oJson:ToJson()
 
         oMultiBV:cBody := cJSon
@@ -129,6 +137,7 @@ User Function mbenvio()
         cChave := xFilial("SA2")+aTabtemp[ln][1]+aTabtemp[ln][2]    //Defini como chave o Alias e o conteudo dos campos de indice
         cRefer := "SA2"+cChave
         If lRet //Sucesso, grava o ID no cadastro para não enviar novamente e grava o monitoramento com status de sucesso
+            cJSonRet := oMultiBV:cJsonRet
             cID := oMultiBV:cID
             dbSelectArea("SA2")
             SA2->(dbSetOrder(1))
@@ -139,7 +148,7 @@ User Function mbenvio()
                 SA2->(MsUnLock())
             EndIf
             cStZZ0 := "1"      //1=Inclui novo processo na ZZ0
-            U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
+            U_MBAtuMnt(cIdProc,cRefer,cJson,cJsonRet,cStZZ0,cFazenda)
         Else    //Falha - reenvia
             cStZZ0 := "1"      ///1=Inclui novo processo na ZZ0; 3=Retornado falha - reenvia
             U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
@@ -152,6 +161,7 @@ User Function mbenvio()
     aTabTemp := {}
     ln := 0
     cJSon :=  ""
+    cJSonRet := ""
     cIdProc:= ""
     cError := ""
     cStZZ0 := ""
@@ -181,6 +191,7 @@ User Function mbenvio()
         cChave := xFilial("SAH")+aTabtemp[ln][1]    //Defini como chave o Alias e o conteudo dos campos de indice
         cRefer := "SAH"+cChave
         If lRet //Sucesso, grava o ID no cadastro para não enviar novamente e grava o monitoramento com status de sucesso
+            cJSonRet := oMultiBV:cJsonRet
             cID := oMultiBV:cID
             dbSelectArea("SAH")
             SAH->(dbSetOrder(1))
@@ -191,7 +202,7 @@ User Function mbenvio()
                 SAH->(MsUnLock())
             EndIf
             cStZZ0 := "1"      //1=Inclui novo processo na ZZ0
-            U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
+            U_MBAtuMnt(cIdProc,cRefer,cJson,cJSonRet,cStZZ0,cFazenda)
         Else    //Falha - reenvia
             cStZZ0 := "3"      //3=Retornado falha - reenvia
             U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
@@ -204,6 +215,7 @@ User Function mbenvio()
     aTabTemp := {}
     ln := 0
     cJSon :=  ""
+    cJSonRet := ""
     cIdProc:= ""
     cError := ""
     cStZZ0 := ""
@@ -231,6 +243,7 @@ User Function mbenvio()
         cChave := xFilial("SBM")+aTabtemp[ln][1]    //Defini como chave o Alias e o conteudo dos campos de indice
         cRefer := "SBM"+cChave
         If lRet //Sucesso, grava o ID no cadastro para não enviar novamente e grava o monitoramento com status de suce
+            cJSonRet := oMultiBV:cJsonRet
             cID := oMultiBV:cID
             dbSelectArea("SBM")
             SBM->(dbSetOrder(1))
@@ -241,7 +254,7 @@ User Function mbenvio()
                 SBM->(MsUnLock())
             EndIf
             cStZZ0 := "1"      //1=Inclui novo processo na ZZ0
-            U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
+            U_MBAtuMnt(cIdProc,cRefer,cJson,cJsonRet,cStZZ0,cFazenda)
         Else    //Falha - reenvia
             cStZZ0 := "3"      //3=Retornado falha - reenvia
             U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
@@ -254,6 +267,7 @@ User Function mbenvio()
     aTabTemp := {}
     ln := 0
     cJSon :=  ""
+    cJSonRet := ""
     cIdProc:= ""
     cError := ""
     cStZZ0 := ""
@@ -266,6 +280,7 @@ User Function mbenvio()
     cError := oMultiBV:cError
     If lRet //Sucesso, grava o ID no cadastro para não enviar novamente e grava o monitoramento com status de suces
         cJson  := oMultiBV:cJSonRet   
+        cJsonRet := cJson
         oJson := Eval(bObject)
         oJson:FromJson(cJSon)
         aTabTemp := oJson:GetJsonObject("results") //Recupera o grupo do material para enviar junto com o subgrupo, visto que o endpoint do Multibovinos necessita do ID do grupo para criar o subgrupo, e como o grupo e o subgrupo estão sendo criado no mesmo processo, preciso recuperar o ID do grupo para enviar junto com o subgrupo.
@@ -283,13 +298,20 @@ User Function mbenvio()
                 ZZ3->(MsUnLock())
             EndIf
         Next
+        cStZZ0 := "1"      //1=Inclui novo processo na ZZ0
+        U_MBAtuMnt(cIdProc,cRefer,cJson,cJsonRet,cStZZ0,cFazenda)
         FreeObj(oJson)
+    Else    //Falha - reenvia
+        cStZZ0 := "3"      //3=Retornado falha - reenvia
+        U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
+        U_MBGRVHST(cIdProc,cRefer,cJson,cError)
     EndIf
  
     //--------------------------------------------------- PRODUTOS ---------------------------------------------------
     aTabTemp := {}
     ln := 0
     cJSon :=  ""
+    cJSonRet := ""
     cIdProc:= ""
     cError := ""
     cStZZ0 := ""
@@ -337,6 +359,7 @@ User Function mbenvio()
         cChave := xFilial("SB1")+aTabtemp[ln][1]    //Defini como chave o Alias e o conteudo dos campos de indice
         cRefer := "SB1"+cChave
         If lRet //Sucesso, grava o ID no cadastro para não enviar novamente e grava o monitoramento com status de sucesso
+            cJsonRet := oMultiBV:cJsonRet
             cID := oMultiBV:cID
             dbSelectArea("SB1")
             SB1->(dbSetOrder(1))
@@ -347,7 +370,7 @@ User Function mbenvio()
                 SB1->(MsUnLock())
             EndIf
             cStZZ0 := "1"      //1=Inclui o processo na ZZ0 como finalizado
-            U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
+            U_MBAtuMnt(cIdProc,cRefer,cJson,cJsonRet,cStZZ0,cFazenda)
         Else    //Falha - reenvia
             cStZZ0 := "3"      //3=Retornado falha - reenvia
             U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
