@@ -128,12 +128,12 @@ Return FreeObj(_oObj)
     https://terminaldeinformacao.com/2024/02/24/formatando-data-e-hora-com-a-fwtimestamp-maratona-advpl-e-tl-255/
 ****************************************************************************************/
 Method Token() Class MultiBovinos
-
     Local _lRet   := .T.
     Local _lToken := .F.
     Local bObject := {|| JsonObject():New()}
     Local oJson   := Eval(bObject)
     Local aToken  := StrTokArr(SuperGetMV("MB_XMBTOKE",.F.,""),";")//Grava token,aaaammddhhmmss - para reutilização do token enquanto estiver válido, evitando consultas desnecessárias para obtenção de token. O formato da data é utilizado para comparação e validação da validade do token, que tem duração de 24 horas. Tanimoto 20220509
+    Local cPrefixo:= Alltrim(SuperGetMV("MB_PFTOKEN",.F.,"JWT")) //Utilizado para validar se o token gravado é realmente um token ou se é uma string vazia, evitando erros de comparação de data quando a variável estiver vazia. Tanimoto 20220509
     
     ::GetSSLCache()
 
@@ -158,7 +158,7 @@ Method Token() Class MultiBovinos
         If ::oRest:Post(::aHeadOut)                                 // Utiliza metodo POST |
             ::cJSonRet := RTrim(::oRest:GetResult())               // Desesserializa JSON |
             ::oJsonRet := oJson:FromJson(::cJSonRet)
-            ::cToken   := "JWT "+Rtrim(oJson:GetJsonObject("token"))
+            ::cToken   := cPrefixo+" "+Rtrim(oJson:GetJsonObject("token"))
             PutMV("MB_XMBTOKE",::cToken +";"+ Alltrim(FWTimeStamp(1,dDatabase+1,Time()))) //Grava token com data de validade de 24 horas para reutilização, evitando consultas desnecessárias para obtenção de token.
             _lRet      := .T.
         Else

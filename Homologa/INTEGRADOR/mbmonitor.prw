@@ -180,7 +180,7 @@ Method GrvMonitor() Class mbMonitor
         ZZ0->ZZ0_JSONRE := ::cJSonRet
         //ZZ0->ZZ0_QTDREG := ::nQtdReg
         //ZZ0->ZZ0_ERPFUN := ::cFunName
-        //ZZ0->ZZ0_FAZEND := ::cFazenda
+        ZZ0->ZZ0_FAZEND := ::cFazenda
         ZZ0->( MsUnLock() )
     Else 
         RecLock("ZZ0",_lGrava)

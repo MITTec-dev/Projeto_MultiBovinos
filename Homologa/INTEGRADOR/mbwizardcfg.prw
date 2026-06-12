@@ -47,7 +47,7 @@ Private xMVCont     := Nil
 Private cMVDesc     := ""
 Private cGMVNGI     := Space(50)
 Private cGMVNGL     := Space(50)
-Private aMVGer      := {}
+Private aMVMB      := {}
 Private aMVNFe      := {}
 Private aMVCTe      := {}
 
@@ -55,7 +55,7 @@ oTFont := TFont():New('Arial',,-16,.T.)
 
 //Para que a tela da classe FWWizardControl fique no layout com bordas arredondadas iremos fazer com que a janela do Dialog oculte as bordas e a barra de titulo
 //para isso usaremos os estilos WS_VISIBLE e WS_POPUP
-DEFINE DIALOG oDlg TITLE STR0001 PIXEL STYLE nOR(  WS_VISIBLE ,  WS_POPUP ) //'MultiBovinos'
+DEFINE DIALOG oDlg TITLE 'MultiBovinos' PIXEL STYLE nOR(  WS_VISIBLE ,  WS_POPUP )
     
     oDlg:nWidth := 1150
     oDlg:nHeight := 620
@@ -103,21 +103,12 @@ DEFINE DIALOG oDlg TITLE STR0001 PIXEL STYLE nOR(  WS_VISIBLE ,  WS_POPUP ) //'M
 
     //Pagina 5
     oNewPag5 := oStepWiz:AddStep("5")
-    oNewPag5:SetStepDescription("Config NGINN / NGLIDOS") //"Config NGINN / NGLIDOS"
+    oNewPag5:SetStepDescription("Config Parâmetros Integrador") //"Config NGINN / NGLIDOS"
     oNewPag5:SetConstruction({|Panel| WizMBPg(Panel,5)})
-    oNewPag5:SetNextAction({|| WizMBVld(5)})
+    oNewPag5:SetNextAction({|| ( .T., WizMBHlp("Finalizada configuração do Integrador do MultiBovinos","C") , oDlg:End() )})
     oNewPag5:SetCancelAction({|| .T., oDlg:End()})
     oNewPag5:SetPrevAction({|| .T.})
     oNewPag5:SetPrevTitle("Voltar") //"Voltar"
-
-    //Pagina 6
-    oNewPag6 := oStepWiz:AddStep("6")
-    oNewPag6:SetStepDescription("Config MV's Multibovinos") //"Config MV's Colaboração"
-    oNewPag6:SetConstruction({|Panel| WizMBPg(Panel,6)})
-    oNewPag6:SetNextAction({|| ( .T., WizMBHlp("Finalizada configuração MultiBovinos","C") , oDlg:End() )}) 
-    oNewPag6:SetCancelAction({|| ( .T., oDlg:End() )})
-    oNewPag6:SetPrevAction({|| .T.})
-    oNewPag6:SetPrevTitle("Voltar") //"Voltar"
 
     oStepWiz:Activate()
 
@@ -147,7 +138,7 @@ Local aHdTab    := {}
 Local aTamTab   := {}
 
 If nPage == 1 
-    cDesc1 := "Boas Vindas" + ": " + CRLF + CRLF + "Essa ferramenta tem a finalidade de facilitar a configuração do MultiBovinos"
+    cDesc1 := "Boas Vindas" + ": " + CRLF + CRLF + "Essa ferramenta tem a finalidade de facilitar a configuração do Integrador do ERP com o MultiBovinos"
     oS1Pg1 := TSay():New(10,10,{|| cDesc1 },oPanel,,oTFont,,,,.T.,,,500,100)
 
     oS2Pg1 := TSay():New(080,10,{|| "Links Recomendados:" },oPanel,,oTFont,,,,.T.,,,100,50)
@@ -167,7 +158,7 @@ Elseif nPage == 2
     aTabelas := WizMBTab()
     aHdTab    := {"Ok","Tabela","Descrição"} 
     aTamTab   := {1,10,200}
-    cDesc1 := "Finalidade de validar tabelas e campos do MultiBovinos"
+    cDesc1 := "Finalidade de validar tabelas e campos necessários para o Integrador do MultiBovinos"
     oS1Pg2 := TSay():New(10,10,{|| cDesc1 },oPanel,,oTFont,,,,.T.,,,600,100)
 
     oBrw1Pg2 	:= TWBrowse():New(70,10,290,125,,aHdTab,aTamTab,oPanel,,,,,,,,,,,,.F.,,.T.,,.F.,,,)
@@ -181,7 +172,7 @@ Elseif nPage == 3
     aFontes := WizMBPrw()
     aHdTab    := {"Ok","Programas","Responsavel","Data OK","Data Ambiente"} //"Ok"#"Programas"#"Responsavel"#"Data OK"#"Data Ambiente"
     aTamTab   := {1,80,40,60,60}
-    cDesc1 := "Descrição" + ': ' + CRLF + CRLF + "Finalidade de validar programas do MultiBovinos"
+    cDesc1 := "Descrição" + ': ' + CRLF + CRLF + "Finalidade de validar programas do Integrador do MultiBovinos"
     oS1Pg3 := TSay():New(10,10,{|| cDesc1 },oPanel,,oTFont,,,,.T.,,,600,100)
 
     oBrw1Pg3 	:= TWBrowse():New(70,10,290,125,,aHdTab,aTamTab,oPanel,,,,,,,,,,,,.F.,,.T.,,.F.,,,)
@@ -194,10 +185,10 @@ Elseif nPage == 3
 
     oMGetPg3 := tMultiget():new( 70, 310, {| u | if( pCount() > 0, cMsgPrw := u, cMsgPrw ) },oPanel, 220, 125, , , , , , .T. )
 Elseif nPage == 4
-    aMVImp  := WizMBMV("Col")
+    aMVImp  := WizMBMV("MB",nPage)
     aHdTab  := {"Ok","Parâmetro","Descrição"} //"Ok"#"Parâmetro"#"Descrição"
     aTamTab := {1,60,100}
-    cDesc1 := "Descrição" + ': ' + CRLF + CRLF + "Finalidade de validar parâmetros do MultiBovinos"
+    cDesc1 := "Descrição" + ': ' + CRLF + CRLF + "Finalidade de validar parâmetros do Integrador do MultiBovinos"
     oS1Pg4 := TSay():New(10,10,{|| cDesc1 },oPanel,,oTFont,,,,.T.,,,600,100)
 
     oBrw1Pg4 	:= TWBrowse():New(70,10,290,125,,aHdTab,aTamTab,oPanel,,,,,,,,,,,,.F.,,.T.,,.F.,,,)
@@ -208,74 +199,30 @@ Elseif nPage == 4
 
     oMGetPg4 := tMultiget():new( 70, 310, {| u | if( pCount() > 0, cMsgMV1 := u, cMsgMV1 ) },oPanel, 220, 125, , , , , , .T. )
 Elseif nPage == 5
-    cMVNGIN	:= SuperGetMV("MV_NGINN",.F.,Space(50))
-    If !Empty(cMVNGIN)
-        cGMVNGI := cMVNGIN + Space(50)
-    Endif
-    cMVNGLI	:= SuperGetMV("MV_NGLIDOS",.F.,Space(50))
-    If !Empty(cMVNGLI)
-        cGMVNGL := cMVNGLI + Space(50)
-    Endif
-
-    cDesc1 := "Descrição" + ': ' + CRLF + CRLF + "Definir caminho de onde serão importados os XML (Parâmetros)" + CRLF +; //"Descrição"#"Definir caminho de onde serão importados os XML (Parâmetros)"
-			 "Obs: o caminho deve estar dentro do DATA do Protheus." 
-    oS1Pg5 := TSay():New(10,10,{|| cDesc1 },oPanel,,oTFont,,,,.T.,,,600,100)
-
-    oS2Pg5 := TSay():New(80,10,{|| "MV_NGINN: "},oPanel,,oTFont,,,,.T.,,,80,20)
-	oG1Pg5 := TGet():New(78,120,{|u|If(PCount()==0,cGMVNGI,cGMVNGI := u ) },oPanel,200,20,"@!",,,,,.F.,,.T.,,.F.,,.F.,.F.,,.F.,.F. ,,"cGMVNGI",,,,)
-	
-	oS3Pg5 := TSay():New(110,10,{|| "MV_NGLIDOS: "},oPanel,,oTFont,,,,.T.,,,80,20)
-    oG2Pg5 := TGet():New(108,120,{|u|If(PCount()==0,cGMVNGL,cGMVNGL := u ) },oPanel,200,20,"@!",,,,,.F.,,.T.,,.F.,,.F.,.F.,,.F.,.F. ,,"cGMVNGL",,,,)
-
-    oS4Pg5 := TSay():New(150,10,{|| "Documentação: Estrutura de pastas" },oPanel,,oTFont,,,,.T.,,,500,50) //"Documentação: Estrutura de pastas"
-    oS4Pg5:blClicked := {|| WizMBOpen("https://tdn.totvs.com/pages/releaseview.action?pageId=271662259")}
-    oS4Pg5:nClrText  := CLR_BLUE
-Elseif nPage == 6
-    aMVGer  := WizMBMV("Ger")
-    aMVNfe  := WizMBMV("Nfe")
-    aMVCte  := WizMBMV("Cte") 
+    aMVMB  := WizMBMV("MB",nPage)
     
     aHdTab    := {"Parâmetro","Conteudo","Descrição"} //"Parâmetro"#"Conteudo"#"Descrição"
     aTamTab   := {40,20,100}
 
-    //Geral
-    oGrp1Pg6:= TGroup():New(05,05,100,185,STR0028,oPanel,,,.T.) //'Geral'
-	oBrw1Pg6 	:= TWBrowse():New(15,10,170,80,,aHdTab,aTamTab,oGrp1Pg6,,,,,,,,,,,,.F.,,.T.,,.F.,,,)
-	oBrw1Pg6:SetArray(aMVGer)
-	oBrw1Pg6:bLine	:= { || {   aMVGer[oBrw1Pg6:nAt,1],;
-							    aMVGer[oBrw1Pg6:nAt,2],;
-                                aMVGer[oBrw1Pg6:nAt,3]}}  
+    oGrp1Pg6:= TGroup():New(05,05,100,555,'MultiBovinos',oPanel,,,.T.)
+	oBrw1Pg6:= TWBrowse():New(15,10,540,80,,aHdTab,aTamTab,oGrp1Pg6,,,,,,,,,,,,.F.,,.T.,,.F.,,,)
+	oBrw1Pg6:SetArray(aMVMB)
+	oBrw1Pg6:bLine	:= { || {aMVMB[oBrw1Pg6:nAt,2],;
+                             aMVMB[oBrw1Pg6:nAt,4],;
+                             aMVMB[oBrw1Pg6:nAt,3]}}  
     oBrw1Pg6:bChange := {|| WizMBAtuMV(oBrw1Pg6,oBrw1Pg6:nAt,oG1Pg6,oG2Pg6,oMGetPg6)}
 
-    //NFe
-    oGrp2Pg6:= TGroup():New(05,195,100,380,STR0029,oPanel,,,.T.) //'NFe'
-	oBrw2Pg6 	:= TWBrowse():New(15,200,175,80,,aHdTab,aTamTab,oGrp2Pg6,,,,,,,,,,,,.F.,,.T.,,.F.,,,)
-	oBrw2Pg6:SetArray(aMVNFe)
-	oBrw2Pg6:bLine	:= { || {   aMVNFe[oBrw2Pg6:nAt,1],;
-							    aMVNFe[oBrw2Pg6:nAt,2],;
-                                aMVNFe[oBrw2Pg6:nAt,3]}}
-    oBrw2Pg6:bChange := {|| WizMBAtuMV(oBrw2Pg6,oBrw2Pg6:nAt,oG1Pg6,oG2Pg6,oMGetPg6)}
-    
-    //CTe
-    oGrp3Pg6:= TGroup():New(05,385,100,570,STR0030,oPanel,,,.T.) //'CTe'
-	oBrw3Pg6 	:= TWBrowse():New(15,390,175,80,,aHdTab,aTamTab,oGrp3Pg6,,,,,,,,,,,,.F.,,.T.,,.F.,,,)
-	oBrw3Pg6:SetArray(aMVCte)
-	oBrw3Pg6:bLine	:= { || {   aMVCte[oBrw3Pg6:nAt,1],;
-							    aMVCte[oBrw3Pg6:nAt,2],;
-                                aMVCte[oBrw3Pg6:nAt,3]}} 
-    oBrw3Pg6:bChange := {|| WizMBAtuMV(oBrw3Pg6,oBrw3Pg6:nAt,oG1Pg6,oG2Pg6,oMGetPg6)}
-				
-	oS2Pg6 := TSay():New(110,010,{|| STR0022 + ": "},oPanel,,oTFont,,,,.T.,,,80,20) //"Parâmetro"
+	oS2Pg6 := TSay():New(110,010,{|| "Parâmetro" + ": "},oPanel,,oTFont,,,,.T.,,,80,20)
 	oG1Pg6 := TGet():New(108,075,{|u|If(PCount()==0,cMVPar,cMVPar := u ) },oPanel,100,20,"@!",,,,,.F.,,.T.,,.F.,,.F.,.F.,,.F.,.F. ,,"cMVPar",,,,)
     oG1Pg6:bWhen := {|| .F.}
 	
-	oS3Pg6 := TSay():New(140,010,{|| STR0027 + ": "},oPanel,,oTFont,,,,.T.,,,80,20) //"Conteudo"
+	oS3Pg6 := TSay():New(140,010,{|| "Conteudo" + ": "},oPanel,,oTFont,,,,.T.,,,80,20) //"Conteudo"
 	oG2Pg6 := TGet():New(138,075,{|u|If(PCount()==0,xMVCont,xMVCont := u ) },oPanel,100,20,,,,,,.F.,,.T.,,.F.,,.F.,.F.,,.F.,.F. ,,"xMVCont",,,,)
 
-    oS4Pg6 := TSay():New(110,180,{|| STR0016 + ": "},oPanel,,oTFont,,,,.T.,,,80,20) //"Descrição"
+    oS4Pg6 := TSay():New(110,180,{|| "Descrição" + ": "},oPanel,,oTFont,,,,.T.,,,80,20) //"Descrição"
 	oMGetPg6 := tMultiget():new(108, 245, {| u | if( pCount() > 0, cMVDesc := u, cMVDesc ) },oPanel, 320, 085, , , , , , .T. )
 	
-    oBtPg6 := TBrowseButton():New( 140,180,STR0031,oPanel, {|| WizMBSaveMV({oBrw1Pg6,oBrw2Pg6,oBrw3Pg6})},40,20,,,.F.,.T.,.F.,,.F.,,,) //'Salvar'
+    oBtPg6 := TBrowseButton():New( 140,180,'Salvar',oPanel, {|| WizMBSaveMV({oBrw1Pg6,oBrw2Pg6,oBrw3Pg6})},40,20,,,.F.,.T.,.F.,,.F.,,,) 
     oBtPg6:SetColor( CLR_WHITE, rgb(9, 123, 152)) 
 Endif
 
@@ -302,7 +249,7 @@ If nPage == 2
     For nI := 1 To Len(oBrw1Pg2:aArray)
         If oBrw1Pg2:aArray[nI,1] == 2
             lRet := .F.
-            cMsg := STR0032 + CRLF + STR0033 //"Possui tabelas inexistente e/ou invalidas em seu ambiente. "#"Favor verificar seu ambiente"
+            cMsg := "Possui tabelas inexistente e/ou invalidas em seu ambiente. " + CRLF + "Favor verificar seu ambiente"
             cOpc := "B"
             Exit
         Endif
@@ -311,12 +258,12 @@ Elseif nPage == 3
     For nI := 1 To Len(oBrw1Pg3:aArray)
         If oBrw1Pg3:aArray[nI,1] == 2
             lRet := .F.
-            cMsg := STR0034 + CRLF + STR0033 //"Possui fontes inexistente em seu ambiente. "#"Favor verificar seu ambiente"
+            cMsg := "Possui fontes inexistente em seu ambiente. " + CRLF + "Favor verificar seu ambiente"
             cOpc := "B"
             Exit
         Elseif oBrw1Pg3:aArray[nI,1] == 3
             lRet := .F.
-            cMsg := STR0035 + CRLF + STR0036 //"Possui fontes desatualizados em seu ambiente. "#"MultiBovinos pode não funcionar corretamente. Deseja Prosseguir?"
+            cMsg := "Possui fontes desatualizados em seu ambiente. " + CRLF + "A Integração com MultiBovinos pode não funcionar corretamente. Deseja Prosseguir?"
             cOpc := "A"
             Exit
         Endif
@@ -325,15 +272,16 @@ Elseif nPage  == 4
     For nI := 1 To Len(oBrw1Pg4:aArray)
         If oBrw1Pg4:aArray[nI,1] == 2
             lRet := .F.
-            cMsg := STR0037 + CRLF + STR0033 //"Possui parâmetros inexistente em seu ambiente. "#"Favor verificar seu ambiente"
-            cOpc := "B"
+            //cMsg := "Possui parâmetros inexistente em seu ambiente. " + CRLF + "Favor verificar seu ambiente"
+            cMsg := "Possui parâmetros inexistente em seu ambiente. " + CRLF + "A Integração com MultiBovinos pode não funcionar corretamente. Deseja Prosseguir?"
+            cOpc := "A"
             Exit
         Endif
     Next nI
 Elseif nPage  == 5
     If Empty(cGMVNGI) .Or. Empty(cGMVNGL)
         lRet := .F.
-        cMsg := STR0038 + CRLF + STR0039 //"Parâmetro MV_NGINN e/ou MV_NGLIDOS não foram preenchidos."#"Favor preencher parâmetros"
+        cMsg := "Parâmetro MV_NGINN e/ou MV_NGLIDOS não foram preenchidos. " + CRLF + "Favor preencher parâmetros"
         cOpc := "B"
     Endif
 
@@ -368,12 +316,12 @@ Local aOpc    := {}
 Local nOpc      := 0
 
 If cOpc == "B" .Or. cOpc == "C"
-    aOpc := {STR0014} //"Ok"
+    aOpc := {"Ok"}
 Elseif cOpc == "A"
     aOpc := {"Sim","Não"} //"Sim"#"Não"
 Endif
 
-nOpc := Aviso("Atenção",cMsg,aOpc) //
+nOpc := Aviso("Atenção",cMsg,aOpc) 
 
 If cOpc == "A"
     If nOpc == 1
@@ -395,16 +343,15 @@ Validação das tabelas/estrutura
 
 Static Function WizMBTab()
 
-Local aTabVer   := {{"CKO",;
-                     {"CKO_ARQUIV","CKO_XMLRET","CKO_FLAG","CKO_CODEDI","CKO_CODERR","CKO_FILPRO","CKO_EMPPRO","CKO_CNPJIM","CKO_MSGERR",;
-                     "CKO_DOC","CKO_NOMFOR","CKO_SERIE","CKO_CHVDOC","CKO_ORIGEM"}},;
-                     {"SDS",;
-                     {"DS_DOC","DS_SERIE","DS_FORNEC","DS_LOJA","DS_NOMEFOR","DS_CNPJ","DS_TIPO","DS_ESPECI","DS_EMISSA","DS_FORMUL","DS_EST",;
-                     "DS_ARQUIVO","DS_CHAVENF","DS_UFDESTR","DS_MUDESTR","DS_MUORITR","DS_UFORITR"}},;
-                     {"SDT",;
-                     {"DT_ITEM","DT_COD","DT_PRODFOR","DT_DESCFOR","DT_FORNEC","DT_LOJA","DT_DOC","DT_SERIE","DT_CNPJ","DT_QUANT","DT_VUNIT",;
-                     "DT_PEDIDO","DT_ITEMPC","DT_NFORI","DT_SERIORI","DT_ITEMORI","DT_TES","DT_LOTE","DT_DTVALID","DT_LOCAL","DT_CHVNFO",;
-                     "DT_UM","DT_SEGUM","DT_QTSEGUM","DT_CLASFIS"}}}
+Local aTabVer   := {{"SA2",{"A2_XENVMB","A2_XIDMB"}},;
+                    {"SAH",{"AH_XIDMB"}},;
+                    {"SB1",{"B1_XENVMB","B1_XSGRUPO","B1_XIDMB"}},;
+                    {"SBM",{"BM_XIDMB"}},;
+                    {"SF1",{"F1_XIDMB"}},;
+                    {"ZZ0",{"ZZ0_FILIAL","ZZ0_ID","ZZ0_CHAVE","ZZ0_SEQ","ZZ0_DTINC","ZZ0_HRINC","ZZ0_JSON","ZZ0_DTPINI","ZZ0_HRPINI","ZZ0_DTPFIM","ZZ0_HRPFIM","ZZ0_STPROC","ZZ0_TENTAT","ZZ0_FAZEND","ZZ0_JSONRE"}},;
+                    {"ZZ1",{"ZZ1_FILIAL","ZZ1_ID","ZZ1_CHAVE","ZZ1_ZZ0SEQ","ZZ1_SEQ","ZZ1_DTHIST","ZZ1_HRHIST","ZZ1_JSON","ZZ1_ERRO"}},;
+                    {"ZZ2",{"ZZ2_FILIAL","ZZ2_FAZEND","ZZ2_NOME"}},;
+                    {"ZZ3",{"ZZ3_FILIAL","ZZ3_COD","ZZ3_DESC"}}}
 
 Local aTabRet   := {}
 Local nI        := 0
@@ -414,22 +361,10 @@ For nI := 1 To Len(aTabVer)
     cMsgTab += "Tabela: " + ": " + aTabVer[nI,1] + CRLF //
     cMsgEst := ""
     If ChkFile(aTabVer[nI,1])
-        If aTabVer[nI,1] == "CKO"
-            If RetSqlName("CKO") <> "CKOCOL"
-                cMsgTab += "[ERROR].......... " + STR0043 + CRLF + CRLF + CRLF + CRLF //"Tabela: inexistente e/ou diferente de CKOCOL no ambiente"
-                aAdd(aTabRet,{2,aTabVer[nI,1],FwSX2Util():GetX2Name(aTabVer[nI,1])})
-            Else
-                cMsgTab += "[OK]............. " + "Tabela: OK"  + CRLF //
-                cMsgEst := WizMBEst(aTabVer[nI,1],aTabVer[nI,2]) + CRLF + CRLF + CRLF
-                cMsgTab += cMsgEst
-                aAdd(aTabRet,{Iif("WARNING" $ cMsgEst,3,1),aTabVer[nI,1],FwSX2Util():GetX2Name(aTabVer[nI,1])})
-            Endif
-        Else
-            cMsgTab += "[OK]............. " + "Tabela: OK" + CRLF
-            cMsgEst := WizMBEst(aTabVer[nI,1],aTabVer[nI,2]) + CRLF + CRLF + CRLF
-            cMsgTab += cMsgEst
-            aAdd(aTabRet,{Iif("WARNING" $ cMsgEst,3,1),aTabVer[nI,1],FwSX2Util():GetX2Name(aTabVer[nI,1])}) 
-        Endif
+        cMsgTab += "[OK]............. " + "Tabela: OK" + CRLF
+        cMsgEst := WizMBEst(aTabVer[nI,1],aTabVer[nI,2]) + CRLF + CRLF + CRLF
+        cMsgTab += cMsgEst
+        aAdd(aTabRet,{Iif("WARNING" $ cMsgEst,3,1),aTabVer[nI,1],FwSX2Util():GetX2Name(aTabVer[nI,1])}) 
     Else
         cMsgTab += "[ERROR].......... " + "Tabela: inexistente no ambiente" + CRLF + CRLF + CRLF + CRLF
         aAdd(aTabRet,{2,aTabVer[nI,1],FwSX2Util():GetX2Name(aTabVer[nI,1])})
@@ -479,11 +414,15 @@ Validação do binario e fontes
 
 Static Function WizMBPrw() 
 
-Local aPrwVer   := {{"MBMONITR.PRW","01/06/2026","CFG"},;
-                    {"MATUMNT.PRW","01/06/2026","CFG"},;
-                    {"MBENVIO.PRW","01/06/2026","CFG"},;
-                    {"MBMATERIAIS.PRW","01/06/2026","CFG"},;
-                    {"MULTIBOVINOS.PRW","01/06/2026","CFG"}}
+Local aPrwVer   := {{"MBMONITOR.PRW","01/04/2026","CFG"},;
+                    {"MBATUMNT.PRW","01/04/2026","CFG"},;
+                    {"MBCADASTROS.PRW","01/04/2026","CFG"},;
+                    {"MBENVIO.PRW","01/04/2026","CFG"},;
+                    {"MBMATERIAIS.PRW","01/04/2026","CFG"},;
+                    {"MBENTANIMAIS.PRW","01/04/2026","CFG"},;
+                    {"MBENTPRODUTOS.PRW","01/04/2026","CFG"},;
+                    {"MBENVIO.PRW","01/04/2026","CFG"},;
+                    {"MULTIBOVINOS.PRW","01/04/2026","CFG"}}
 Local aPrwRet   := {}
 Local nI        := 0
 Local aDados    := {}
@@ -530,61 +469,43 @@ Validação dos parametros
 @since 21/10/2013
 /*/
 
-Static Function WizMBMV(cOpc)
+Static Function WizMBMV(cOpc,nPage)
+    Local aMVVer    := {}
+    Local aMVRet    := {}
+    //Local aAux      := {}
+    Local nI        := 0
+    Local cMsg      := ""
+    Local cDescMV   := ""
+    Local xConteudo := Nil
 
-Local aMVVer    := {}
-Local aMVRet    := {}
-Local aAux      := {}
-Local nI        := 0
-Local cMsg      := ""
-Local cDescMV   := ""
-Local xConteudo := Nil
-
-If cOpc == "Col" //MultiBovinos
-    aMVVer := {"MV_COMCOL1","MV_COMCOL2","MV_COMCOL3","MV_MSGCOL","MV_FILREP","MV_XMLCFPC","MV_XMLCFBN","MV_XMLCFDV","MV_XMLCFND","MV_XMLCFNO",;
-                "MV_CTECLAS","MV_XMLPFCT","MV_XMLTECT","MV_XMLCPCT","MV_COLVCHV","MV_VLRCTE"}
-Elseif cOpc == "Ger" //Geral
-    aMVVer := {"MV_COMCOL1","MV_COMCOL2","MV_COMCOL3","MV_MSGCOL","MV_FILREP"}
-Elseif cOpc == "Nfe"
-    aMVVer := {"MV_XMLCFPC","MV_XMLCFBN","MV_XMLCFDV","MV_XMLCFND","MV_XMLCFNO"}
-Elseif cOpc == "Cte"
-    aMVVer := {"MV_CTECLAS","MV_XMLPFCT","MV_XMLTECT","MV_XMLCPCT","MV_COLVCHV","MV_VLRCTE"}
-Endif
-
-dbSelectArea( "SX6" )
-SX6->( dbSetOrder( 1 ) )
-
-For nI := 1 To Len(aMVVer)
-    cMsg += "Parâmetro: " + aMVVer[nI] + CRLF //"Parâmetro: "
-    cDescMV := ""
-    
-    If FWSX6Util():ExistsParam( aMVVer[nI] )
-        If SX6->( MsSeek( FwxFilial("SX6") + aMVVer[nI] ) )
-            cDescMV     := AllTrim(X6Descric()) + " " + AllTrim(X6Desc1()) + " " + AllTrim(X6Desc2())
-            xConteudo	:= X6Conteud()
-
-            cMsg += "[OK]............. " + "Parâmetro: " + "OK" + CRLF + CRLF //#"OK"
-            aAdd(aMVRet,{1,aMVVer[nI],cDescMV,xConteudo}) 
-        Endif
-    Else
-        cMsg += "[ERROR].......... " + "Parâmetro: " + "inexistente no ambiente" + CRLF + CRLF //"Parâmetro: "#"inexistente no ambiente"
-        aAdd(aMVRet,{2,aMVVer[nI],cDescMV})
+    If cOpc == "MB" //MultiBovinos
+        aMVVer := {"MB_PFTOKEN","MB_XMBCFOA","MB_XMBCFOP","MB_XMBCLIP","MB_XMBCLIT","MB_XMBDTAI","MB_XMBENVP","MB_XMBENVT","MB_XMBPASP","MB_XMBPAST","MB_XMBQDFI","MB_XMBTESA","MB_XMBTESP","MB_XMBTOKE","MB_XMBURLP","MB_XMBURLT"}
     Endif
-Next nI
 
-If cOpc == "Col"
-    cMsgMV1 := cMsg
-Endif
+    dbSelectArea( "SX6" )
+    SX6->( dbSetOrder( 1 ) )
 
-If cOpc == "Ger" .Or. cOpc == "Nfe" .Or. cOpc == "Cte"
-    For nI := 1 To Len(aMVRet)
-        aAdd(aAux,{aMVRet[nI,2],aMVRet[nI,4],aMVRet[nI,3]})
+    For nI := 1 To Len(aMVVer)
+        cMsg += "Parâmetro: " + aMVVer[nI] + CRLF //"Parâmetro: "
+        cDescMV := ""
+
+        If FWSX6Util():ExistsParam( aMVVer[nI] )
+            If SX6->( MsSeek( FwxFilial("SX6") + aMVVer[nI] ) )
+                cDescMV     := AllTrim(X6Descric()) + " " + AllTrim(X6Desc1()) + " " + AllTrim(X6Desc2())
+                xConteudo	:= X6Conteud()
+
+                cMsg += "[OK]............. " + "Parâmetro: " + "OK" + CRLF + CRLF //#"OK"
+                aAdd(aMVRet,{1,aMVVer[nI],cDescMV,xConteudo}) 
+            Endif
+        ElseIf nPage==4
+            cMsg += "[ERROR].......... " + "Parâmetro: " + "inexistente no ambiente" + CRLF + CRLF //"Parâmetro: "#"inexistente no ambiente"
+            aAdd(aMVRet,{2,aMVVer[nI],cDescMV,""})
+        Endif
     Next nI
 
-    If Len(aAux) > 0
-        aMVRet := aAux
+    If cOpc == "MB"
+        cMsgMV1 := cMsg
     Endif
-Endif
 
 Return aMVRet
 
@@ -597,14 +518,13 @@ Refresh Parametros
 /*/
 
 Static Function WizMBAtuMV(oObj,nLinha,oObjG1,oObjG2,oObjM1)
+    cMVPar  := oObj:aArray[nLinha,2]
+    cMVDesc := oObj:aArray[nLinha,3]
+    xMVCont := oObj:aArray[nLinha,4]
 
-cMVPar  := oObj:aArray[nLinha,1]
-xMVCont := oObj:aArray[nLinha,2]
-cMVDesc := oObj:aArray[nLinha,3]
-
-oObjG1:Refresh()
-oObjG2:Refresh()
-oObjM1:Refresh()
+    oObjG1:Refresh()
+    oObjG2:Refresh()
+    oObjM1:Refresh()
 
 Return
 
@@ -616,23 +536,17 @@ Atualizar parametros MV
 @since 21/10/2013
 /*/
 
-Static Function WizMBSaveMV(aObj)
+Static Function WizMBSaveMV(oObj)
+    Local nPos  := 0
+    Local nI    := 1
 
-Local nPos  := 0
-Local nI    := 0
-Local oObj  := Nil
+    PutMV(cMVPar,xMVCont)
 
-PutMV(cMVPar,xMVCont)
-
-For nI := 1 To Len(aObj)
-    oObj := aObj[nI]
-
-    nPos := aScan(oObj:aArray,{|x| AllTrim(x[1]) == AllTrim(cMVPar)})
+    nPos := aScan(oObj[nI]:aArray,{|x| AllTrim(x[2]) == AllTrim(cMVPar)})
     If nPos > 0
-        oObj:aArray[nPos,2] := xMVCont
-        oObj:Refresh()
+        oObj[nI]:aArray[nPos,4] := xMVCont
+        oObj[nI]:Refresh()
     Endif
-Next nI
 
 Return .T.
 
