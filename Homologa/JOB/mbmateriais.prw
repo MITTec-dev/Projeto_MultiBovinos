@@ -149,6 +149,7 @@ User Function mbmaterial(dData,cTipo)
                         EndIf
                         lTemErro := .T.
                     Else
+                        cStZZ0 := "1"
                         cChave := xFilial("SD3")+cDocum    //Defini como chave o Alias e o conteudo dos campos de indice
                         cRefer := "SD3"+cChave
                         U_MBAtuMnt(cIdProc,cRefer,cJson,cJsonRet,cStZZ0,cFazenda)
@@ -157,6 +158,7 @@ User Function mbmaterial(dData,cTipo)
             EndIf
         Next
         If lTemErro
+            cStZZ0 := "3"      //3=Retornado falha - reenvia
             cError := MemoRead( AllTrim( NomeAutoLog() ) )  // Lê o conteúdo do log
             U_MBAtuMnt(cIdProc,cRefer,cJson,cJsonRet,cStZZ0,cFazenda)
             U_MBGRVHST(cIdProc,cRefer,cJson,cError)
@@ -166,6 +168,7 @@ User Function mbmaterial(dData,cTipo)
             lTemErro := .F.
         EndIf
     Else    //Falha - reenvia
+        cStZZ0 := "3"      //3=Retornado falha - reenvia
         U_MBAtuMnt(cIdProc,cRefer,cJson,cJsonRet,cStZZ0,cFazenda)
         U_MBGRVHST(cIdProc,cRefer,cJson,cError)
     EndIf

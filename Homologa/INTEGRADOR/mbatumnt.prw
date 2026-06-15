@@ -8,21 +8,22 @@
     @since 16/11/2020
 /*/
 /***********************************************************************************/
-User Function mbAtuMnt(_cIdProc,_cChave,_cJson,_cError,_cStZZ0,cFazenda)
+User Function mbAtuMnt(cIdProc,cChave,cJson,cJsonRet,cStZZ0,cFazenda)
 
     Local _aArea    := GetArea()
     Local _lRet     := .T.
     Local _oMonitor := MBMonitor():New()
     //Default _nOpc   := 3
     
-    _oMonitor:cIdProc   := _cIdProc
-    _oMonitor:cChave    := _cChave
-    _oMonitor:cStatus   := _cStZZ0
-    _oMonitor:cJSon     := _cJson
+    _oMonitor:cIdProc   := cIdProc
+    _oMonitor:cChave    := cChave
+    _oMonitor:cStatus   := cStZZ0
+    _oMonitor:cJSon     := cJson
     _oMonitor:nQtdReg   := 1
     _oMonitor:cFazenda  := cFazenda
     _oMonitor:cFunName  := ProcName(2)
-    
+    _oMonitor:cJsonRet  := cJsonRet
+
     If _oMonitor:GrvMonitor()
         _lRet := .T.
     Else

@@ -26,6 +26,7 @@ Class MBMonitor
     Data cFunName       As String
     Data cErrorRet      As String
     Data cFazenda       As String
+    Data cJsonRet       As String
 
     Data nTpGrava       As Integer
     Data nTpRet         As Integer

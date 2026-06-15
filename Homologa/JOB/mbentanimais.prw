@@ -191,13 +191,13 @@ User Function mbentanimais()
                 cStZZ0 := "1"      //1=Inclui novo processo na ZZ0
                 U_MBAtuMnt(cIdProc,cRefer,cJson,cJsonRet,cStZZ0,cFazenda)
             Else    //Falha - reenvia
-                cStZZ0 := "1"      ///1=Inclui novo processo na ZZ0; 3=Retornado falha - reenvia
+                cStZZ0 := "3"      ///1=Inclui novo processo na ZZ0; 3=Retornado falha - reenvia
                 U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
                 U_MBGRVHST(cIdProc,cRefer,cJson,cError)
             EndIf
             FreeObj(oJson)
         Else
-            cStZZ0 := "1"      ///1=Inclui novo processo na ZZ0; 3=Retornado falha - reenvia
+            cStZZ0 := "3"      ///1=Inclui novo processo na ZZ0; 3=Retornado falha - reenvia
             U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
             U_MBGRVHST(cIdProc,cRefer,cJson,cError)
         EndIf    
