@@ -150,6 +150,7 @@ Method Token() Class MultiBovinos
         ::cJSonToken := oJson:ToJson()
         ::aHeadOut  := {}
         aAdd(::aHeadOut,"Content-Type: application/json" )          // Array contendo parametros de cabeçalho |
+        aAdd(::aHeadOut,"Dispositivo: 8" )
         aAdd(::aHeadOut,'User-Agent: Mozilla/5.0 (compatible; Protheus '+GetBuild()+')')    //Adiciona user agente. Obrigatorio a partir de 01/06/2022. Tanimoto 20220509
         ::oRest   := FWRest():New(RTrim(::cURL))                    // Instancia classe FwRest |
         ::oRest:nTimeOut := 600                                     // TimeOut do processo |
@@ -192,6 +193,7 @@ Method SetPropriedade() Class MultiBovinos
         // Array contendo parametros de cabeçalho |
         ::aHeadOut  := {}
         aAdd(::aHeadOut,"Content-Type: application/json" )
+        aAdd(::aHeadOut,"Dispositivo: 8" )
         aAdd(::aHeadOut,"Authorization: " + ::cToken)
         aAdd(::aHeadOut,'User-Agent: Mozilla/5.0 (compatible; Protheus '+GetBuild()+')')    //Adiciona user agente. Obrigatorio a partir de 01/06/2022. Tanimoto 20220509
     
@@ -230,6 +232,7 @@ Method PostCadastros() Class MultiBovinos
     // Array contendo parametros de cabeçalho |
     ::aHeadOut  := {}
     aAdd(::aHeadOut,"Content-Type: application/json" )
+    aAdd(::aHeadOut,"Dispositivo: 8" )
     aAdd(::aHeadOut,"Authorization: " + ::cToken)
     aAdd(::aHeadOut,'User-Agent: Mozilla/5.0 (compatible; Protheus '+GetBuild()+')')    //Adiciona user agente. Obrigatorio a partir de 01/06/2022. Tanimoto 20220509
 
@@ -270,6 +273,7 @@ Method GetCadastros() Class MultiBovinos
     // Array contendo parametros de cabeçalho |
     ::aHeadOut  := {}
     aAdd(::aHeadOut,"Content-Type: application/json" )
+    aAdd(::aHeadOut,"Dispositivo: 8" )
     aAdd(::aHeadOut,"Authorization: " + ::cToken)
     aAdd(::aHeadOut,'User-Agent: Mozilla/5.0 (compatible; Protheus '+GetBuild()+')')    //Adiciona user agente. Obrigatorio a partir de 01/06/2022. Tanimoto 20220509
 
@@ -302,24 +306,21 @@ Method PutCadastros() Class MultiBovinos
     Local _lRet     := .T.
     Local oJson     := Nil
 
-
     If Empty(::cToken)
         _lRet := ::Token()                           // Retorna token conexão |
     EndIf
 
-
     // Array contendo parametros de cabeçalho |
     ::aHeadOut  := {}
     aAdd(::aHeadOut,"Content-Type: application/json" )
+    aAdd(::aHeadOut,"Dispositivo: 8" )
     aAdd(::aHeadOut,"Authorization: " + ::cToken)
     aAdd(::aHeadOut,'User-Agent: Mozilla/5.0 (compatible; Protheus '+GetBuild()+')')    //Adiciona user agente. Obrigatorio a partir de 01/06/2022. Tanimoto 20220509
 
-
     ::oRest   := FWRest():New(RTrim(::cURL))        // Instancia classe FwRest |
     ::oRest:nTimeOut := 600                         // TimeOut do processo |
-    ::oRest:SetPath(::cPath)              // Metodo a ser enviado | 
+    ::oRest:SetPath(::cPath)                        // Metodo a ser enviado | 
     ::oRest:SetPostParams(::cBody)                  // Parametros de Envio | body da requisição
-
 
     If ::oRest:Put(::aHeadOut)                     // Utiliza metodo PUT |
         ::cJSonRet := RTrim(::oRest:GetResult())   // Desesserializa JSON |
@@ -333,8 +334,6 @@ Method PutCadastros() Class MultiBovinos
         _lRet       := .F.
     EndIf
 
-
     ::ClearObj(::oRest)             // Limpa Objeto |
-
 
 Return _lRet 
