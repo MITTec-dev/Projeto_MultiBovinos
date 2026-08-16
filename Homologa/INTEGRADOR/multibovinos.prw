@@ -279,9 +279,10 @@ Method GetCadastros() Class MultiBovinos
 
     ::oRest   := FWRest():New(RTrim(::cURL))        // Instancia classe FwRest |
     ::oRest:nTimeOut := 600                         // TimeOut do processo |
-    ::oRest:SetPath(::cPath)              // Metodo a ser enviado | 
-    //::oRest:SetPostParams(::cBody)                  // Parametros de Envio | body da requisição
-
+    ::oRest:SetPath(::cPath)                        // Metodo a ser enviado | 
+    If !Empty(::cBody)
+        ::oRest:SetPostParams(::cBody)                  // Parametros de Envio | body da requisição
+    EndIf
     If ::oRest:GET(::aHeadOut)                     // Utiliza metodo GET |
         ::cJSonRet := RTrim(::oRest:GetResult())   // Desesserializa JSON |
         //oJson := JsonObject():New()
