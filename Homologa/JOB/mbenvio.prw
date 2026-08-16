@@ -20,6 +20,7 @@
     0009 - Entrada de Animais
     0010 - Custos
     0011 - Saida de Materiais
+    0012 - Consulta codigo da Cidade
     ZZ0_STPROC
     "1"	, "Aguardando processamento"
     "2" , "Retornado sucesso"
@@ -49,6 +50,8 @@ User Function mbenvio()
     Local atelefones := {}
     Local aemails := {}
     Local cFazenda := Alltrim(Posicione("ZZ2",1,cFilAnt,"ZZ2_FAZENDA"))
+    Local cNomEst := ""
+    Local cCodCidade := ""
     //Local lIsBlind := IsBlind()
     //Local lLogEmail := SuperGETMV("MB_MBLOGEML",.F.,.F.) //Flag para envio de email em caso de erro na integração, 1 para enviar email e 0 para não enviar.
 
@@ -116,13 +119,15 @@ User Function mbenvio()
             oJson["emails"] := aemails
         EndIf
         If !Empty(Rtrim(aTabtemp[ln][5]))
+            cNomEst := Posicione("SX5", 1, xFilial("SX5") + "12" + cUF, "X5_DESCRI")
+            cCodCidade := mbTabCidade(cNomEst,Rtrim(aTabtemp[ln][17])) //Recupera o ID da cidade no endpoint do Multibovinos, para enviar junto com o endereço do fornecedor
             oenderecos["cep"] := Rtrim(aTabtemp[ln][6])
             oenderecos["logradouro"] := Rtrim(TrataEnd(aTabtemp[ln][5],"L")) //TrataEnd para retirar o complemento do endereço e deixar apenas o logradouro, visto que o endpoint do Multibovinos tem campos separados para logradouro e complemento, e o campo de complemento é opcional, então para evitar erros de integração por conta do tamanho do campo de logradouro, optei por retirar o complemento do campo de logradouro e deixar apenas o nome da rua, avenida, etc no campo de logradouro, e caso haja a necessidade de enviar o complemento, seria necessário criar um campo específico para isso no cadastro do fornecedor.
             oenderecos["numero"] := TrataEnd(aTabtemp[ln][5],"N")
             oenderecos["bairro"] := Rtrim(aTabtemp[ln][16])
             oenderecos["principal"] := .T.
             oenderecos["tipo"] := "1"
-            oenderecos["cidade"] := Right(aTabtemp[ln][17],3) 
+            oenderecos["cidade"] := cCodCidade
             aadd(aenderecos, oenderecos)
             oJson["enderecos"] := aenderecos
         EndIf
@@ -168,18 +173,18 @@ User Function mbenvio()
     cRefer := ""
     cChave := ""
     oJson  := Eval(bObject)
-    cQuery := "SELECT AH_UNIMED, AH_XIDMB, AH_DESCPO "
+    cQuery := "SELECT AH_UNIMED, AH_XIDMB, AH_DESCPO, AH_XTIPOMB "
     cQuery += "FROM "+RetSqlName("SB1")+" SB1 "
     cQuery += "INNER JOIN "+RetSqlName("SAH")+" SAH ON AH_FILIAL='"+xFilial("SAH")+"' AND AH_UNIMED=B1_UM AND SAH.D_E_L_E_T_='' "
     cQuery += "WHERE SB1.D_E_L_E_T_=' ' AND B1_XIDMB='' AND B1_XENVMB='1' AND AH_XIDMB='' "
-    cQuery += "GROUP BY AH_UNIMED, AH_XIDMB, AH_DESCPO"
+    cQuery += "GROUP BY AH_UNIMED, AH_XIDMB, AH_DESCPO, AH_XTIPOMB"
     cQuery := ChangeQuery(cQuery)
     TCSqlToArr(cQuery, @aTabTemp)
     For ln := 1 to Len(aTabTemp)
         oJson := Eval(bObject)   //Cria o objeto
         oJson["nome"]          := SubStr(aTabTemp[ln][3], 1, 50)  //Nome da unidade de medida
         oJson["abreviatura"]   := SubStr(aTabTemp[ln][1], 1, 10)  //Abreviatura da unidade de medida
-        oJson["tipo_unidade"]  := "1"                              //Tipo da unidade de medida, 1-Unidade;2-Peso;3-Volume (Litro);4=Metro (MT)
+        oJson["tipo_unidade"]  := aTabTemp[ln][4]                 //Tipo da unidade de medida, 1-Unidade;2-Peso;3-Volume (Litro);4=Metro (MT)
         oJson["multiplicador"] := 1 
         cJSon := oJson:ToJson()
         oMultiBV:cBody := cJSon
@@ -379,3 +384,42 @@ User Function mbenvio()
         FreeObj(oJson)
     Next
 Return
+
+/***********************************************************************************
+    {Protheus.doc} mbGrvHst
+    @description Atualiza historico monitor quando ocorre erro
+***********************************************************************************/
+
+User Function mbTabCidade(cCidade,cUF)
+    Local cJSon :=  ""
+    Local aTabTemp := {}
+    Local ln := 0
+    Local cCodCidade := ""
+    Local cJSonRet := ""
+    Local cIdProc:= "0012"
+    Local cError := ""
+    Local cStZZ0 := ""
+    Local cRefer := "ENDPOIND CIDADE"
+
+    oMultiBV:cPath := "cidade/"             //Id do endpoint para envio dos subgrupos
+    oMultiBV:cBody := '{"nome_exato":"'+cCidade+'","estado_uf":"'+cUF+'"}'
+    lRet   := oMultiBV:GetCadastros()      //Executa integração e captura retorno para gravar na tabela de monitoramento
+    cError := oMultiBV:cError
+    If lRet     //Sucesso, grava o ID no cadastro para não enviar novamente e grava o monitoramento com status de suces
+        cJson  := oMultiBV:cJSonRet   
+        cJsonRet := cJson
+        oJson := Eval(bObject)
+        oJson:FromJson(cJSon)
+        aTabTemp := oJson:GetJsonObject("results") //Recupera o grupo do material para enviar junto com o subgrupo, visto que o endpoint do Multibovinos necessita do ID do grupo para criar o subgrupo, e como o grupo e o subgrupo estão sendo criado no mesmo processo, preciso recuperar o ID do grupo para enviar junto com o subgrupo.
+        For ln := 1 to Len(aTabTemp)
+            cCodCidade := aTabTemp[ln]["id"]
+        Next
+        cStZZ0 := "1"      //1=Inclui novo processo na ZZ0
+        U_MBAtuMnt(cIdProc,cRefer,cJson,cJsonRet,cStZZ0,cFazenda)
+        FreeObj(oJson)
+    Else    //Falha - reenvia
+        cStZZ0 := "3"      //3=Retornado falha - reenvia
+        U_MBAtuMnt(cIdProc,cRefer,cJson,cError,cStZZ0,cFazenda)
+        U_MBGRVHST(cIdProc,cRefer,cJson,cError)
+    EndIf
+Return(cCodCidade)
