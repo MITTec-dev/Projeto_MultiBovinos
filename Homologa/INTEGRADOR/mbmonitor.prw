@@ -160,7 +160,11 @@ Method GrvMonitor() Class mbMonitor
         dbSelectArea("ZZ0")
         ZZ0->( dbSetOrder(1) )
         ZZ0->( dbSeek(xFilial("ZZ0") + PadR(::cIdProc,TamSx3("ZZ0_ID")[1]) + PadR(::cChave,TamSx3("ZZ0_CHAVE")[1]) + PadR(::cSeqZZ0,TamSx3("ZZ0_SEQ")[1])) )
-        ::nTentativa :=  ZZ0->ZZ0_TENTAT + 1    //Incremento o numero de tentativas
+        If Found()
+            ::nTentativa :=  ZZ0->ZZ0_TENTAT + 1    //Incremento o numero de tentativas
+        Else
+            _lGrava := .T.      //Flag indicando novo registro na ZZ0
+        EndIf
     EndIf
 
     If _lGrava

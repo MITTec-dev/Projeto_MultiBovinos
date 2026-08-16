@@ -50,6 +50,7 @@ User Function mbenvio()
     Local atelefones := {}
     Local aemails := {}
     Local cFazenda := Alltrim(Posicione("ZZ2",1,cFilAnt,"ZZ2_FAZENDA"))
+    Local cUF := ""
     Local cNomEst := ""
     Local cCodCidade := ""
     //Local lIsBlind := IsBlind()
@@ -119,8 +120,9 @@ User Function mbenvio()
             oJson["emails"] := aemails
         EndIf
         If !Empty(Rtrim(aTabtemp[ln][5]))
+            cUF := Rtrim(aTabtemp[ln][10])
             cNomEst := Posicione("SX5", 1, xFilial("SX5") + "12" + cUF, "X5_DESCRI")
-            cCodCidade := mbTabCidade(cNomEst,Rtrim(aTabtemp[ln][17])) //Recupera o ID da cidade no endpoint do Multibovinos, para enviar junto com o endereço do fornecedor
+            cCodCidade := u_mbCodCidade(Rtrim(cNomEst),Rtrim(cUF),cFazenda)      //Recupera o ID da cidade no endpoint do Multibovinos, para enviar junto com o endereço do fornecedor
             oenderecos["cep"] := Rtrim(aTabtemp[ln][6])
             oenderecos["logradouro"] := Rtrim(TrataEnd(aTabtemp[ln][5],"L")) //TrataEnd para retirar o complemento do endereço e deixar apenas o logradouro, visto que o endpoint do Multibovinos tem campos separados para logradouro e complemento, e o campo de complemento é opcional, então para evitar erros de integração por conta do tamanho do campo de logradouro, optei por retirar o complemento do campo de logradouro e deixar apenas o nome da rua, avenida, etc no campo de logradouro, e caso haja a necessidade de enviar o complemento, seria necessário criar um campo específico para isso no cadastro do fornecedor.
             oenderecos["numero"] := TrataEnd(aTabtemp[ln][5],"N")
@@ -390,7 +392,9 @@ Return
     @description Atualiza historico monitor quando ocorre erro
 ***********************************************************************************/
 
-User Function mbTabCidade(cCidade,cUF)
+User Function mbCodCidade(cCidade,cUF,cFazenda)
+    Local oMultiBV := MultiBovinos():New()
+    Local bObject  := {|| JsonObject():New()}
     Local cJSon :=  ""
     Local aTabTemp := {}
     Local ln := 0
@@ -401,8 +405,8 @@ User Function mbTabCidade(cCidade,cUF)
     Local cStZZ0 := ""
     Local cRefer := "ENDPOIND CIDADE"
 
-    oMultiBV:cPath := "cidade/"             //Id do endpoint para envio dos subgrupos
-    oMultiBV:cBody := '{"nome_exato":"'+cCidade+'","estado_uf":"'+cUF+'"}'
+    oMultiBV:cPath := "cidade/" //+"nome_exato="+cCidade+"&estado_uf="+cUF             //Id do endpoint para envio dos subgrupos
+    oMultiBV:cGetParam := "nome_exato="+Escape(cCidade)+"&"+ "estado_uf="+Escape(cUF)
     lRet   := oMultiBV:GetCadastros()      //Executa integração e captura retorno para gravar na tabela de monitoramento
     cError := oMultiBV:cError
     If lRet     //Sucesso, grava o ID no cadastro para não enviar novamente e grava o monitoramento com status de suces

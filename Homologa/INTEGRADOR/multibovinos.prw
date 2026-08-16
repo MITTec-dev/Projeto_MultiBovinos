@@ -38,6 +38,7 @@ Class MultiBovinos
 	Data nState	        As Integer
 
     Data aHeadOut       As Array
+    Data cGetParam      As String
 
     Data oRest          As Object 
     Data oJson          As Object
@@ -94,6 +95,7 @@ Method New() Class MultiBovinos
 	::nBugs		    := 1
 	::nState	    := 1
     ::aHeadOut      := {}
+    ::cGetParam     := ""
     ::oRest         := Nil
     ::oJson         := Nil
     ::oJsonRet      := Nil 
@@ -280,10 +282,15 @@ Method GetCadastros() Class MultiBovinos
     ::oRest   := FWRest():New(RTrim(::cURL))        // Instancia classe FwRest |
     ::oRest:nTimeOut := 600                         // TimeOut do processo |
     ::oRest:SetPath(::cPath)                        // Metodo a ser enviado | 
+    /*
+    If !Empty(::cGetParam)
+        ::oRest:SetGetParams(::cGetParam)               // parâmetros, do tipo GET, que serão enviados ao servidor HTTP através da URI.
+    EndIf
     If !Empty(::cBody)
         ::oRest:SetPostParams(::cBody)                  // Parametros de Envio | body da requisição
     EndIf
-    If ::oRest:GET(::aHeadOut)                     // Utiliza metodo GET |
+    */
+    If ::oRest:GET(::aHeadOut,::cGetParam)                     // Utiliza metodo GET |
         ::cJSonRet := RTrim(::oRest:GetResult())   // Desesserializa JSON |
         //oJson := JsonObject():New()
         //oJson:FromJson(::cJSonRet)
